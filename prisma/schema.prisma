@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  admin
+  member
+}
+
+enum ContactStatus {
+  invited
+  active
+  inactive
+}
+
+enum RoomStatus {
+  active
+  archived
+}
+
+enum FileStatus {
+  uploading
+  ready
+}
+
+enum NdaStatus {
+  not_sent
+  sent
+  signed
+  declined
+  voided
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  denied
+  revoked
+}
+
+enum MagicLinkType {
+  invite
+  login
+}
+
+enum ActorType {
+  user
+  contact
+  system
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         UserRole @default(member)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  contacts         Contact[]
+  dataRooms        DataRoom[]
+  files            File[]
+  approvedAccesses DataRoomAccess[] @relation("ApprovedBy")
+  sessions         Session[]
+  passwordResets   PasswordResetToken[]
+}
+
+model Contact {
+  id          String        @id @default(uuid()) @db.Uuid
+  email       String        @unique
+  name        String
+  company     String?
+  status      ContactStatus @default(invited)
+  createdById String        @db.Uuid
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  createdBy   User             @relation(fields: [createdById], references: [id])
+  accesses    DataRoomAccess[]
+  magicLinks  MagicLink[]
+  sessions    Session[]
+}
+
+model DataRoom {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  status      RoomStatus @default(active)
+  createdById String     @db.Uuid
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  createdBy User             @relation(fields: [createdById], references: [id])
+  files     File[]
+  tags      Tag[]
+  accesses  DataRoomAccess[]
+}
+
+model File {
+  id           String     @id @default(uuid()) @db.Uuid
+  name         String
+  size         Int
+  mimeType     String
+  storageKey   String
+  status       FileStatus @default(uploading)
+  dataRoomId   String     @db.Uuid
+  uploadedById String     @db.Uuid
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  dataRoom   DataRoom  @relation(fields: [dataRoomId], references: [id])
+  uploadedBy User      @relation(fields: [uploadedById], references: [id])
+  tags       FileTag[]
+}
+
+model Tag {
+  id         String  @id @default(uuid()) @db.Uuid
+  name       String
+  color      String?
+  dataRoomId String  @db.Uuid
+
+  dataRoom DataRoom  @relation(fields: [dataRoomId], references: [id])
+  files    FileTag[]
+
+  @@unique([name, dataRoomId])
+}
+
+model FileTag {
+  fileId String @db.Uuid
+  tagId  String @db.Uuid
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([fileId, tagId])
+}
+
+model DataRoomAccess {
+  id                  String         @id @default(uuid()) @db.Uuid
+  contactId           String         @db.Uuid
+  dataRoomId          String         @db.Uuid
+  ndaStatus           NdaStatus      @default(not_sent)
+  approvalStatus      ApprovalStatus @default(pending)
+  docusignEnvelopeId  String?
+  approvedById        String?        @db.Uuid
+  approvedAt          DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  contact    Contact  @relation(fields: [contactId], references: [id])
+  dataRoom   DataRoom @relation(fields: [dataRoomId], references: [id])
+  approvedBy User?    @relation("ApprovedBy", fields: [approvedById], references: [id])
+
+  @@unique([contactId, dataRoomId])
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String?  @db.Uuid
+  contactId String?  @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id])
+  contact Contact? @relation(fields: [contactId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique
+  userId    String    @db.Uuid
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model MagicLink {
+  id        String        @id @default(uuid()) @db.Uuid
+  token     String        @unique
+  contactId String        @db.Uuid
+  type      MagicLinkType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id])
+}
+
+model AuditLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  action       String
+  actorType    ActorType
+  actorId      String    @db.Uuid
+  resourceType String
+  resourceId   String    @db.Uuid
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+
+  @@index([resourceType, resourceId])
+  @@index([actorType, actorId])
+  @@index([createdAt])
+}
