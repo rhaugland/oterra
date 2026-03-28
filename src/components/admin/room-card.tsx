@@ -28,7 +28,7 @@ export function RoomCard({
   return (
     <Link
       href={`/admin/rooms/${id}`}
-      className="block bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all p-5"
+      className="block bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all p-5"
     >
       <div className="flex items-start justify-between mb-2">
         <h3 className="text-base font-semibold text-gray-900 truncate">

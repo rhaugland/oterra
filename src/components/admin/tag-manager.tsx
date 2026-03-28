@@ -78,7 +78,7 @@ export function TagManager({ roomId, tags, onTagsChange }: TagManagerProps) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
       <h3 className="text-sm font-semibold text-gray-900 mb-3">Tags</h3>
 
       {/* Existing tags */}

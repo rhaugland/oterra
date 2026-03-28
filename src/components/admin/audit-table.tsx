@@ -134,7 +134,7 @@ export function AuditTable() {
   return (
     <div>
       {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 flex flex-wrap gap-3 items-end">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 flex flex-wrap gap-3 items-end">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-500">Action</label>
           <select
@@ -225,7 +225,7 @@ export function AuditTable() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">

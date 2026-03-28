@@ -3,9 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, AuthError } from "@/lib/auth-admin";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
+import { investorTypeEnum, geographyEnum, checkSizeEnum } from "@/lib/validations";
 
 const updateContactSchema = z.object({
-  status: z.enum(["active", "inactive"]),
+  status: z.enum(["active", "inactive"]).optional(),
+  investorType: investorTypeEnum.nullable().optional(),
+  geography: geographyEnum.nullable().optional(),
+  checkSize: checkSizeEnum.nullable().optional(),
 });
 
 export async function GET(
@@ -80,9 +84,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Contact not found" }, { status: 404 });
   }
 
+  const updateData: Record<string, unknown> = {};
+  if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
+  if (parsed.data.investorType !== undefined) updateData.investorType = parsed.data.investorType;
+  if (parsed.data.geography !== undefined) updateData.geography = parsed.data.geography;
+  if (parsed.data.checkSize !== undefined) updateData.checkSize = parsed.data.checkSize;
+
   const contact = await prisma.contact.update({
     where: { id: contactId },
-    data: { status: parsed.data.status },
+    data: updateData,
   });
 
   await logAudit({
@@ -91,7 +101,7 @@ export async function PATCH(
     actorId: user.id,
     resourceType: "Contact",
     resourceId: contact.id,
-    metadata: { status: parsed.data.status },
+    metadata: { ...parsed.data },
   });
 
   return NextResponse.json(contact);

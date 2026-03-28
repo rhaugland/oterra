@@ -196,7 +196,7 @@ export default function SettingsPage() {
               Loading...
             </div>
           ) : (
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               {team.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                   <p className="text-base font-medium text-gray-500">No team members yet</p>
@@ -268,7 +268,7 @@ export default function SettingsPage() {
           {/* Invite Form Modal */}
           {showInviteForm && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-              <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Invite Team Member</h2>
                 <form onSubmit={(e) => void handleInvite(e)} className="space-y-4">
                   <div>
@@ -338,7 +338,7 @@ export default function SettingsPage() {
       {activeTab === "nda" && (
         <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">NDA Template</h2>
-          <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-2xl">
+          <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-2xl">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
                 <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

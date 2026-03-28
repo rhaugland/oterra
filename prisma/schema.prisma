@@ -47,6 +47,28 @@ enum MagicLinkType {
   login
 }
 
+enum InvestorType {
+  family_office
+  venture_capital
+  private_equity
+  strategic_corporate
+  other
+}
+
+enum Geography {
+  us
+  middle_east
+  apac
+  europe
+  other
+}
+
+enum CheckSize {
+  small
+  mid
+  large
+}
+
 enum ActorType {
   user
   contact
@@ -76,6 +98,9 @@ model Contact {
   name        String
   company     String?
   status      ContactStatus @default(invited)
+  investorType  InvestorType?
+  geography     Geography?
+  checkSize     CheckSize?
   createdById String        @db.Uuid
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

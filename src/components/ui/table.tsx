@@ -7,7 +7,7 @@ interface TableProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Table({ children, className = "", ...props }: TableProps) {
   return (
     <div
-      className={["overflow-x-auto rounded-lg border border-gray-200", className]
+      className={["overflow-x-auto rounded-xl border border-gray-200", className]
         .filter(Boolean)
         .join(" ")}
       {...props}

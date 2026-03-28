@@ -40,10 +40,31 @@ export const createRoomSchema = z.object({
 export type CreateRoomInput = z.infer<typeof createRoomSchema>;
 
 // Contacts
+export const investorTypeEnum = z.enum([
+  "family_office",
+  "venture_capital",
+  "private_equity",
+  "strategic_corporate",
+  "other",
+]);
+
+export const geographyEnum = z.enum([
+  "us",
+  "middle_east",
+  "apac",
+  "europe",
+  "other",
+]);
+
+export const checkSizeEnum = z.enum(["small", "mid", "large"]);
+
 export const createContactSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   company: z.string().optional(),
+  investorType: investorTypeEnum.optional(),
+  geography: geographyEnum.optional(),
+  checkSize: checkSizeEnum.optional(),
 });
 
 export type CreateContactInput = z.infer<typeof createContactSchema>;

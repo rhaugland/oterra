@@ -180,14 +180,14 @@ export function FileList({
 }: FileListProps) {
   if (files.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+      <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
         <p className="text-sm text-gray-400">No files uploaded yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+    <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
       <div className="px-4 py-3 border-b border-gray-100">
         <h3 className="text-sm font-semibold text-gray-900">
           Files ({files.length})

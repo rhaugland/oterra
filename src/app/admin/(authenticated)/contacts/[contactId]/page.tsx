@@ -6,6 +6,28 @@ interface ContactDetailPageProps {
   params: Promise<{ contactId: string }>;
 }
 
+const investorTypeLabels: Record<string, string> = {
+  family_office: "Family Office",
+  venture_capital: "VC",
+  private_equity: "PE",
+  strategic_corporate: "Strategic",
+  other: "Other",
+};
+
+const geographyLabels: Record<string, string> = {
+  us: "US",
+  middle_east: "Middle East",
+  apac: "APAC",
+  europe: "Europe",
+  other: "Other",
+};
+
+const checkSizeLabels: Record<string, string> = {
+  small: "<$500K",
+  mid: "$500K–$5M",
+  large: "$5M+",
+};
+
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     active: "bg-green-100 text-green-800",
@@ -17,6 +39,52 @@ function StatusBadge({ status }: { status: string }) {
       className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${styles[status] ?? "bg-gray-100 text-gray-600"}`}
     >
       {status}
+    </span>
+  );
+}
+
+function InvestorTypeBadge({ value }: { value: string | null }) {
+  if (!value) return null;
+  const colors: Record<string, string> = {
+    family_office: "bg-purple-100 text-purple-800",
+    venture_capital: "bg-blue-100 text-blue-800",
+    private_equity: "bg-indigo-100 text-indigo-800",
+    strategic_corporate: "bg-teal-100 text-teal-800",
+    other: "bg-gray-100 text-gray-600",
+  };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colors[value] ?? "bg-gray-100 text-gray-600"}`}>
+      {investorTypeLabels[value] ?? value}
+    </span>
+  );
+}
+
+function GeographyBadge({ value }: { value: string | null }) {
+  if (!value) return null;
+  const colors: Record<string, string> = {
+    us: "bg-sky-100 text-sky-800",
+    middle_east: "bg-amber-100 text-amber-800",
+    apac: "bg-green-100 text-green-800",
+    europe: "bg-rose-100 text-rose-800",
+    other: "bg-gray-100 text-gray-600",
+  };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colors[value] ?? "bg-gray-100 text-gray-600"}`}>
+      {geographyLabels[value] ?? value}
+    </span>
+  );
+}
+
+function CheckSizeBadge({ value }: { value: string | null }) {
+  if (!value) return null;
+  const colors: Record<string, string> = {
+    small: "bg-gray-100 text-gray-600",
+    mid: "bg-orange-100 text-orange-800",
+    large: "bg-emerald-100 text-emerald-800",
+  };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${colors[value] ?? "bg-gray-100 text-gray-600"}`}>
+      {checkSizeLabels[value] ?? value}
     </span>
   );
 }
@@ -94,7 +162,7 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
       </div>
 
       {/* Contact info */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{contact.name}</h1>
@@ -105,6 +173,15 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
           </div>
           <StatusBadge status={contact.status} />
         </div>
+
+        {(contact.investorType || contact.geography || contact.checkSize) && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <InvestorTypeBadge value={contact.investorType ?? null} />
+            <GeographyBadge value={contact.geography ?? null} />
+            <CheckSizeBadge value={contact.checkSize ?? null} />
+          </div>
+        )}
+
         <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-4 text-xs text-gray-400">
           <span>Created {new Date(contact.createdAt).toLocaleDateString()}</span>
           <span className="text-gray-200">•</span>
@@ -120,11 +197,11 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Room Assignments</h2>
 
         {contact.accesses.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
             <p className="text-sm text-gray-400">No room assignments yet.</p>
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
             {contact.accesses.map((access) => (
               <div key={access.id} className="px-4 py-4 flex items-center justify-between">
                 <div>

@@ -22,6 +22,9 @@ export default async function ContactsPage() {
     email: contact.email,
     company: contact.company,
     status: contact.status as string,
+    investorType: contact.investorType as string | null,
+    geography: contact.geography as string | null,
+    checkSize: contact.checkSize as string | null,
     roomCount: contact.accesses.length,
     approvalCounts: {
       approved: contact.accesses.filter((a) => a.approvalStatus === "approved").length,

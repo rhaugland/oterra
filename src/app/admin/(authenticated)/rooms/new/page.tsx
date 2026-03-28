@@ -53,7 +53,7 @@ export default function NewRoomPage() {
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+      <form onSubmit={handleSubmit} className="space-y-5 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         {error && (
           <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
             {error}

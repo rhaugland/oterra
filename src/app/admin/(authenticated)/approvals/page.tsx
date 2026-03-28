@@ -51,12 +51,12 @@ export default function ApprovalsPage() {
           Loading...
         </div>
       ) : approvals.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg flex flex-col items-center justify-center py-16 text-gray-400">
+        <div className="bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center py-16 text-gray-400">
           <p className="text-base font-medium text-gray-500">No pending approvals</p>
           <p className="text-sm mt-1">All access requests have been reviewed.</p>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
