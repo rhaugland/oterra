@@ -78,3 +78,12 @@ export const requestMagicLinkSchema = z.object({
 });
 
 export type RequestMagicLinkInput = z.infer<typeof requestMagicLinkSchema>;
+
+// Contact self-registration
+export const contactRegisterSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  company: z.string().optional(),
+});
+
+export type ContactRegisterInput = z.infer<typeof contactRegisterSchema>;
