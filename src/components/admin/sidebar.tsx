@@ -6,24 +6,18 @@ import { usePathname } from "next/navigation";
 interface SidebarLink {
   href: string;
   label: string;
-  badge?: number;
 }
 
 const navLinks: SidebarLink[] = [
   { href: "/admin/rooms", label: "Data Rooms" },
   { href: "/admin/contacts", label: "Contacts" },
   { href: "/admin/ndas", label: "NDAs" },
-  { href: "/admin/approvals", label: "Approvals" },
   { href: "/admin/calendar", label: "Calendar" },
   { href: "/admin/receipts", label: "Weekly Receipts" },
   { href: "/admin/settings", label: "Settings" },
 ];
 
-interface SidebarProps {
-  pendingCount?: number;
-}
-
-export function Sidebar({ pendingCount = 0 }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname();
 
   return (
@@ -38,7 +32,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
         {navLinks.map((link) => {
           const isActive =
             pathname === link.href || pathname.startsWith(link.href + "/");
-          const showBadge = link.label === "Approvals" && pendingCount > 0;
 
           return (
             <Link
@@ -51,11 +44,6 @@ export function Sidebar({ pendingCount = 0 }: SidebarProps) {
               }`}
             >
               <span>{link.label}</span>
-              {showBadge && (
-                <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-ottera-gold-400 text-ottera-dark">
-                  {pendingCount}
-                </span>
-              )}
             </Link>
           );
         })}

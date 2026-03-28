@@ -54,16 +54,20 @@ function dispatchMagicLink(row: NdaRow) {
   );
 }
 
+// ── Main table — unsigned / unapproved NDAs ──────────────────────────────────
+
 export function NdaTable({ rows }: NdaTableProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
+  // Main table: everything EXCEPT signed + approved
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      // Exclude signed from this table — they go in the Complete section
-      if (r.ndaStatus === "signed") return false;
+      // Signed + approved goes to Complete section
+      if (r.ndaStatus === "signed" && r.approvalStatus === "approved") return false;
       if (filter && r.ndaStatus !== filter) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -99,11 +103,33 @@ export function NdaTable({ rows }: NdaTableProps) {
     }
   }
 
+  async function handleApprove(row: NdaRow) {
+    setApprovingId(row.accessId);
+    try {
+      const res = await fetch(
+        `/api/admin/rooms/${row.roomId}/access/${row.accessId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "approved" }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error ?? "Failed to approve");
+      } else {
+        router.refresh();
+      }
+    } finally {
+      setApprovingId(null);
+    }
+  }
+
   function getMailtoLink(row: NdaRow) {
     const subject = encodeURIComponent(`NDA for ${row.roomName}`);
     const body = encodeURIComponent(
       `Hi ${row.contactName},\n\nPlease find attached the NDA for the data room "${row.roomName}". ` +
-      `Once you have reviewed and signed, your access will be activated.\n\nBest regards`
+        `Once you have reviewed and signed, your access will be activated.\n\nBest regards`
     );
     return `mailto:${row.contactEmail}?subject=${subject}&body=${body}`;
   }
@@ -127,6 +153,7 @@ export function NdaTable({ rows }: NdaTableProps) {
           <option value="">All statuses</option>
           <option value="not_sent">Not Sent</option>
           <option value="sent">Pending</option>
+          <option value="signed">Signed (Awaiting Approval)</option>
           <option value="declined">Declined</option>
         </select>
       </div>
@@ -134,7 +161,9 @@ export function NdaTable({ rows }: NdaTableProps) {
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <p className="text-sm">
-            {search || filter ? "No NDAs match your filters." : "No pending NDAs. All contacts are either signed or not yet assigned."}
+            {search || filter
+              ? "No NDAs match your filters."
+              : "No pending NDAs."}
           </p>
         </div>
       ) : (
@@ -162,15 +191,28 @@ export function NdaTable({ rows }: NdaTableProps) {
             <tbody className="divide-y divide-gray-100">
               {filtered.map((row) => {
                 const badge = ndaBadge[row.ndaStatus] ?? ndaBadge.not_sent;
-                const canSend = row.ndaStatus === "not_sent" || row.ndaStatus === "declined" || row.ndaStatus === "voided";
+                const canSend =
+                  row.ndaStatus === "not_sent" ||
+                  row.ndaStatus === "declined" ||
+                  row.ndaStatus === "voided";
                 const canResend = row.ndaStatus === "sent";
                 const isSending = sendingId === row.accessId;
+                const isSigned = row.ndaStatus === "signed";
+                const isApproving = approvingId === row.accessId;
 
                 return (
-                  <tr key={row.accessId} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={row.accessId}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     <td className="px-4 py-3">
-                      <Link href={`/admin/contacts/${row.contactId}`} className="block">
-                        <p className="text-sm font-medium text-gray-900">{row.contactName}</p>
+                      <Link
+                        href={`/admin/contacts/${row.contactId}`}
+                        className="block"
+                      >
+                        <p className="text-sm font-medium text-gray-900">
+                          {row.contactName}
+                        </p>
                         <p className="text-xs text-gray-500">
                           {row.contactEmail}
                           {row.contactCompany && ` · ${row.contactCompany}`}
@@ -178,27 +220,39 @@ export function NdaTable({ rows }: NdaTableProps) {
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/admin/rooms/${row.roomId}`} className="text-sm text-ottera-red-600 hover:text-ottera-red-700">
+                      <Link
+                        href={`/admin/rooms/${row.roomId}`}
+                        className="text-sm text-ottera-red-600 hover:text-ottera-red-700"
+                      >
                         {row.roomName}
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}
+                      >
                         {badge.label}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-500">{formatDate(row.createdAt)}</span>
+                      <span className="text-sm text-gray-500">
+                        {formatDate(row.createdAt)}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        {/* Send / Resend NDA */}
                         {(canSend || canResend) && (
                           <button
                             onClick={() => handleSendNda(row.accessId)}
                             disabled={isSending}
                             className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-ottera-red-600 text-white hover:bg-ottera-red-700 disabled:opacity-50 transition-colors"
                           >
-                            {isSending ? "Sending..." : canResend ? "Resend NDA" : "Send NDA"}
+                            {isSending
+                              ? "Sending..."
+                              : canResend
+                                ? "Resend NDA"
+                                : "Send NDA"}
                           </button>
                         )}
                         {(canSend || canResend) && (
@@ -209,6 +263,36 @@ export function NdaTable({ rows }: NdaTableProps) {
                           >
                             Email
                           </a>
+                        )}
+
+                        {/* Signed but not approved — show Approve button */}
+                        {isSigned && row.approvalStatus !== "approved" && (
+                          <button
+                            onClick={() => handleApprove(row)}
+                            disabled={isApproving}
+                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                          >
+                            {isApproving ? (
+                              "Approving..."
+                            ) : (
+                              <>
+                                <svg
+                                  className="w-3.5 h-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                Approve
+                              </>
+                            )}
+                          </button>
                         )}
                       </div>
                     </td>
@@ -223,19 +307,21 @@ export function NdaTable({ rows }: NdaTableProps) {
   );
 }
 
-// ── Complete section — signed NDAs with resend access ────────────────────────
+// ── Complete section — signed + approved, with resend access ─────────────────
 
 export function CompletedNdaTable({ rows }: NdaTableProps) {
-  const signed = rows.filter((r) => r.ndaStatus === "signed");
+  const completed = rows.filter(
+    (r) => r.ndaStatus === "signed" && r.approvalStatus === "approved"
+  );
 
-  if (signed.length === 0) return null;
+  if (completed.length === 0) return null;
 
   return (
     <div className="mt-10">
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-gray-900">Complete</h2>
         <p className="text-sm text-gray-500 mt-0.5">
-          Signed NDAs — resend data room access if a contact needs a reminder
+          Approved contacts — send or resend data room access
         </p>
       </div>
 
@@ -250,10 +336,10 @@ export function CompletedNdaTable({ rows }: NdaTableProps) {
                 Data Room
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                NDA Status
+                Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Signed
+                Approved
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Actions
@@ -261,11 +347,19 @@ export function CompletedNdaTable({ rows }: NdaTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {signed.map((row) => (
-              <tr key={row.accessId} className="hover:bg-gray-50 transition-colors">
+            {completed.map((row) => (
+              <tr
+                key={row.accessId}
+                className="hover:bg-gray-50 transition-colors"
+              >
                 <td className="px-4 py-3">
-                  <Link href={`/admin/contacts/${row.contactId}`} className="block">
-                    <p className="text-sm font-medium text-gray-900">{row.contactName}</p>
+                  <Link
+                    href={`/admin/contacts/${row.contactId}`}
+                    className="block"
+                  >
+                    <p className="text-sm font-medium text-gray-900">
+                      {row.contactName}
+                    </p>
                     <p className="text-xs text-gray-500">
                       {row.contactEmail}
                       {row.contactCompany && ` · ${row.contactCompany}`}
@@ -273,27 +367,47 @@ export function CompletedNdaTable({ rows }: NdaTableProps) {
                   </Link>
                 </td>
                 <td className="px-4 py-3">
-                  <Link href={`/admin/rooms/${row.roomId}`} className="text-sm text-ottera-red-600 hover:text-ottera-red-700">
+                  <Link
+                    href={`/admin/rooms/${row.roomId}`}
+                    className="text-sm text-ottera-red-600 hover:text-ottera-red-700"
+                  >
                     {row.roomName}
                   </Link>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Signed
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Signed
+                    </span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                      Approved
+                    </span>
+                  </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm text-gray-500">{formatDate(row.createdAt)}</span>
+                  <span className="text-sm text-gray-500">
+                    {formatDate(row.createdAt)}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
                   <button
                     onClick={() => dispatchMagicLink(row)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60 transition-colors"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    <svg
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                      />
                     </svg>
-                    Resend Data Room Access
+                    Send Data Room Access
                   </button>
                 </td>
               </tr>
