@@ -100,12 +100,23 @@ export async function POST(
     );
   }
 
+  // Inherit NDA status from any existing access (NDA is global per contact)
+  const existingNda = await prisma.dataRoomAccess.findFirst({
+    where: {
+      contactId: parsed.data.contactId,
+      ndaStatus: { in: ["signed", "sent"] },
+    },
+    orderBy: { ndaStatus: "desc" }, // "signed" sorts after "sent"
+    select: { ndaStatus: true, docusignEnvelopeId: true },
+  });
+
   const access = await prisma.dataRoomAccess.create({
     data: {
       contactId: parsed.data.contactId,
       dataRoomId: roomId,
-      ndaStatus: "not_sent",
+      ndaStatus: existingNda?.ndaStatus ?? "not_sent",
       approvalStatus: "pending",
+      docusignEnvelopeId: existingNda?.docusignEnvelopeId ?? null,
     },
   });
 

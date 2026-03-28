@@ -135,29 +135,30 @@ function Badge({
   );
 }
 
-function NdaStatusCell({ ndaStatuses }: { ndaStatuses: NdaStatusEntry[] }) {
+const ndaPriority: Record<string, number> = {
+  signed: 4,
+  sent: 3,
+  not_sent: 2,
+  declined: 1,
+  voided: 0,
+};
+
+function GlobalNdaStatus({ ndaStatuses }: { ndaStatuses: NdaStatusEntry[] }) {
   if (ndaStatuses.length === 0) {
     return <span className="text-gray-300 text-xs">—</span>;
   }
 
-  // Summarise by ndaStatus value
-  const counts: Record<string, number> = {};
-  for (const entry of ndaStatuses) {
-    counts[entry.ndaStatus] = (counts[entry.ndaStatus] ?? 0) + 1;
-  }
+  // Show the single highest-priority NDA status across all rooms
+  const best = ndaStatuses.reduce((a, b) =>
+    (ndaPriority[a.ndaStatus] ?? 0) >= (ndaPriority[b.ndaStatus] ?? 0) ? a : b
+  );
 
   return (
-    <div className="flex flex-wrap gap-1">
-      {Object.entries(counts).map(([status, count]) => (
-        <span
-          key={status}
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ndaColors[status] ?? "bg-gray-100 text-gray-600"}`}
-        >
-          {count > 1 ? `${count} ` : ""}
-          {ndaLabels[status] ?? status}
-        </span>
-      ))}
-    </div>
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ndaColors[best.ndaStatus] ?? "bg-gray-100 text-gray-600"}`}
+    >
+      {ndaLabels[best.ndaStatus] ?? best.ndaStatus}
+    </span>
   );
 }
 
@@ -185,7 +186,7 @@ function ViewsCell({
       <span className="text-sm text-gray-700 cursor-pointer underline decoration-dotted">
         {viewCount} {viewCount === 1 ? "view" : "views"}
       </span>
-      <div className="absolute z-50 hidden group-hover:block bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-72 -left-2 top-full mt-1">
+      <div className="absolute z-50 hidden group-hover:block bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-72 right-0 bottom-full mb-1 max-h-80 overflow-y-auto">
         <div className="text-xs font-semibold text-gray-700 mb-2">Files Viewed</div>
         {recentViews.map((v) => (
           <div key={v.id} className="text-xs text-gray-600 py-1 border-b border-gray-100 last:border-0">
@@ -201,6 +202,61 @@ function ViewsCell({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Send buttons ─────────────────────────────────────────────────────────────
+
+function SendButtons({ contactId, contactEmail }: { contactId: string; contactEmail: string }) {
+  const router = useRouter();
+  const [sendingNda, setSendingNda] = useState(false);
+
+  async function handleSendNda() {
+    setSendingNda(true);
+    try {
+      const res = await fetch(`/api/admin/contacts/${contactId}/send-nda`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error ?? "Failed to send NDA");
+      }
+    } finally {
+      setSendingNda(false);
+    }
+  }
+
+  function handleSendCalendly() {
+    // Open a mailto with a Calendly link placeholder
+    const subject = encodeURIComponent("Schedule a meeting");
+    const body = encodeURIComponent("Hi,\n\nPlease use the link below to schedule a meeting:\n\n[Your Calendly Link]\n\nBest regards");
+    window.open(`mailto:${contactEmail}?subject=${subject}&body=${body}`, "_blank");
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSendNda(); }}
+        disabled={sendingNda}
+        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-ottera-red-50 text-ottera-red-700 hover:bg-ottera-red-100 border border-ottera-red-200/60 transition-colors disabled:opacity-50"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+          <path fillRule="evenodd" d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4.56 6.22a.75.75 0 0 0-1.12 0l-2 2.25a.75.75 0 1 0 1.12 1l1.19-1.338V14a.75.75 0 0 0 1.5 0v-3.868l1.19 1.338a.75.75 0 1 0 1.12-1l-2-2.25Z" clipRule="evenodd" />
+        </svg>
+        NDA
+      </button>
+      <button
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSendCalendly(); }}
+        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/60 transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+          <path fillRule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2V1.75ZM4.5 6a1 1 0 0 0-1 1v4.5a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-7Z" clipRule="evenodd" />
+        </svg>
+        Calendly
+      </button>
     </div>
   );
 }
@@ -470,7 +526,7 @@ export function ContactTable({ contacts, dataRooms }: ContactTableProps) {
           </p>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -482,6 +538,9 @@ export function ContactTable({ contacts, dataRooms }: ContactTableProps) {
                 <SortHeader label="Data Rooms" sortKey="roomCount" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   NDA Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Send
                 </th>
                 <SortHeader label="Views" sortKey="viewCount" current={sortKey} dir={sortDir} onSort={handleSort} />
               </tr>
@@ -519,19 +578,31 @@ export function ContactTable({ contacts, dataRooms }: ContactTableProps) {
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center">
-                      <Link href={`/admin/contacts/${contact.id}`}>
-                        <span className="text-sm text-gray-600">{contact.roomCount}</span>
-                      </Link>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {contact.ndaStatuses.map((s) => (
+                        <Link
+                          key={s.roomId}
+                          href={`/admin/rooms/${s.roomId}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors border border-gray-200/60"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 text-gray-400">
+                            <path d="M3.5 2A1.5 1.5 0 002 3.5v9A1.5 1.5 0 003.5 14h9a1.5 1.5 0 001.5-1.5v-7A1.5 1.5 0 0012.5 4H9.621a1.5 1.5 0 01-1.06-.44L7.439 2.44A1.5 1.5 0 006.379 2H3.5z" />
+                          </svg>
+                          {s.roomName}
+                        </Link>
+                      ))}
                       <AddToRoomDropdown
                         contactId={contact.id}
                         assignedRoomIds={contact.ndaStatuses.map((s) => s.roomId)}
                         dataRooms={dataRooms}
                       />
-                    </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    <NdaStatusCell ndaStatuses={contact.ndaStatuses} />
+                    <GlobalNdaStatus ndaStatuses={contact.ndaStatuses} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <SendButtons contactId={contact.id} contactEmail={contact.email} />
                   </td>
                   <td className="px-4 py-3">
                     <ViewsCell viewCount={contact.viewCount} recentViews={contact.recentViews} />

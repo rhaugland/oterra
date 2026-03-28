@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { RoomCard } from "@/components/admin/room-card";
+import { ZipRoomCreator } from "@/components/admin/zip-room-creator";
+import { FileDropToRoom } from "@/components/admin/file-drop-to-room";
 
 export default async function RoomsPage() {
   const [rooms, allContacts] = await Promise.all([
@@ -122,10 +124,10 @@ export default async function RoomsPage() {
     const uniqueContactIds = new Set(room.accesses.map((a) => a.contactId));
     const existingContactIds = room.accesses.map((a) => a.contact.id);
 
-    const ndaGroups: Record<string, string[]> = {};
+    const ndaGroups: Record<string, { id: string; name: string }[]> = {};
     for (const a of room.accesses) {
       if (!ndaGroups[a.ndaStatus]) ndaGroups[a.ndaStatus] = [];
-      ndaGroups[a.ndaStatus].push(a.contact.name);
+      ndaGroups[a.ndaStatus].push({ id: a.contact.id, name: a.contact.name });
     }
 
     // View data with full contact details
@@ -183,6 +185,17 @@ export default async function RoomsPage() {
           ))}
         </div>
       )}
+
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Add Files to Room</h2>
+          <FileDropToRoom rooms={rooms.map((r) => ({ id: r.id, name: r.name }))} />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Create Room from ZIP</h2>
+          <ZipRoomCreator />
+        </div>
+      </div>
     </div>
   );
 }

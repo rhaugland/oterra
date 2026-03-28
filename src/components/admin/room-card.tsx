@@ -68,7 +68,7 @@ interface RoomCardProps {
   fileCount: number;
   fileNames: string[];
   contactCount: number;
-  ndaGroups: Record<string, string[]>;
+  ndaGroups: Record<string, { id: string; name: string }[]>;
   investorTypeGroups: Record<string, string[]>;
   geographyGroups: Record<string, string[]>;
   checkSizeGroups: Record<string, string[]>;
@@ -103,11 +103,13 @@ function HoverBadge({
         {count} {label}
       </span>
       {hovered && (
-        <span className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-2 w-44 -left-1 top-full mt-1">
-          <span className="text-[10px] font-semibold text-gray-500 uppercase block mb-1">{label}</span>
-          {names.map((n, i) => (
-            <span key={i} className="block text-xs text-gray-700 py-0.5 truncate">{n}</span>
-          ))}
+        <span className="absolute z-50 -left-1 top-full pt-1 w-44">
+          <span className="block bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+            <span className="text-[10px] font-semibold text-gray-500 uppercase block mb-1">{label}</span>
+            {names.map((n, i) => (
+              <span key={i} className="block text-xs text-gray-700 py-0.5 truncate">{n}</span>
+            ))}
+          </span>
         </span>
       )}
     </span>
@@ -127,14 +129,114 @@ function FileHoverBadge({ fileCount, fileNames }: { fileCount: number; fileNames
         {fileCount} {fileCount === 1 ? "file" : "files"}
       </span>
       {hovered && fileNames.length > 0 && (
-        <span className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-2 w-52 -left-1 top-full mt-1">
-          <span className="text-[10px] font-semibold text-gray-500 uppercase block mb-1">Files</span>
-          {fileNames.slice(0, 10).map((n, i) => (
-            <span key={i} className="block text-xs text-gray-700 py-0.5 truncate">{n}</span>
-          ))}
-          {fileNames.length > 10 && (
-            <span className="block text-[10px] text-gray-400 pt-0.5">+{fileNames.length - 10} more</span>
-          )}
+        <span className="absolute z-50 -left-1 top-full pt-1 w-52">
+          <span className="block bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+            <span className="text-[10px] font-semibold text-gray-500 uppercase block mb-1">Files</span>
+            {fileNames.slice(0, 10).map((n, i) => (
+              <span key={i} className="block text-xs text-gray-700 py-0.5 truncate">{n}</span>
+            ))}
+            {fileNames.length > 10 && (
+              <span className="block text-[10px] text-gray-400 pt-0.5">+{fileNames.length - 10} more</span>
+            )}
+          </span>
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ── NDA badge with send button ───────────────────────────────────────────────
+
+function NdaContactRow({
+  contact,
+  ndaKey,
+  sending,
+  onSend,
+}: {
+  contact: { id: string; name: string };
+  ndaKey: string;
+  sending: boolean;
+  onSend: (contactId: string, e: React.MouseEvent) => void;
+}) {
+  const canSend = ndaKey === "not_sent" || ndaKey === "sent";
+
+  return (
+    <span className="flex items-center justify-between py-1">
+      <span className="text-xs text-gray-700 truncate">{contact.name}</span>
+      {canSend && (
+        <button
+          onClick={(e) => onSend(contact.id, e)}
+          disabled={sending}
+          className="ml-1.5 shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-ottera-red-50 text-ottera-red-700 hover:bg-ottera-red-100 border border-ottera-red-200/60 transition-all disabled:opacity-50"
+        >
+          {sending ? "..." : ndaKey === "sent" ? "Resend" : "Send NDA"}
+        </button>
+      )}
+    </span>
+  );
+}
+
+function NdaHoverBadge({
+  label,
+  ndaKey,
+  contacts,
+  colorCls,
+}: {
+  label: string;
+  ndaKey: string;
+  contacts: { id: string; name: string }[];
+  colorCls: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const [sending, setSending] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function handleSendNda(contactId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setSending(contactId);
+    try {
+      const res = await fetch(`/api/admin/contacts/${contactId}/send-nda`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error ?? "Failed to send NDA");
+      }
+    } finally {
+      setSending(null);
+    }
+  }
+
+  return (
+    <span
+      className="relative inline-block"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span
+        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium cursor-default ${colorCls}`}
+      >
+        {contacts.length} {label}
+      </span>
+      {hovered && (
+        <span className="absolute z-50 -left-1 top-full pt-1 w-52">
+          <span
+            className="block bg-white border border-gray-200 rounded-lg shadow-lg p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-[10px] font-semibold text-gray-500 uppercase block mb-1">{label}</span>
+            {contacts.map((c) => (
+              <NdaContactRow
+                key={c.id}
+                contact={c}
+                ndaKey={ndaKey}
+                sending={sending === c.id}
+                onSend={handleSendNda}
+              />
+            ))}
+          </span>
         </span>
       )}
     </span>
@@ -222,11 +324,6 @@ function ViewsSidebar({ viewData, roomName }: { viewData: ViewerData[]; roomName
         >
           <EyeIcon />
         </button>
-        {totalViews > 0 && (
-          <span className="absolute -top-1 -right-1 bg-ottera-red-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
-            {totalViews}
-          </span>
-        )}
       </span>
 
       {/* Slide-out sidebar */}
@@ -479,13 +576,13 @@ export function RoomCard({
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide w-12 shrink-0">
               NDA
             </span>
-            {Object.entries(ndaGroups).map(([ndaKey, names]) => (
-              <HoverBadge
+            {Object.entries(ndaGroups).map(([ndaKey, contacts]) => (
+              <NdaHoverBadge
                 key={ndaKey}
                 label={ndaLabels[ndaKey] ?? ndaKey}
-                count={names.length}
+                ndaKey={ndaKey}
+                contacts={contacts}
                 colorCls={ndaColors[ndaKey] ?? "bg-gray-100 text-gray-600"}
-                names={names}
               />
             ))}
           </div>

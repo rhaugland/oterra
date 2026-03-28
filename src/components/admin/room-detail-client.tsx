@@ -56,11 +56,6 @@ export function RoomDetailClient({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Upload Files</h2>
-        <FileUpload roomId={roomId} onUploadComplete={refreshFiles} />
-      </div>
-
       <FileList
         roomId={roomId}
         files={files}
@@ -68,6 +63,11 @@ export function RoomDetailClient({
         onFileDeleted={refreshFiles}
         onTagsChanged={refreshFiles}
       />
+
+      <div>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">Add Files</h2>
+        <FileUpload roomId={roomId} onUploadComplete={refreshFiles} />
+      </div>
     </div>
   );
 }

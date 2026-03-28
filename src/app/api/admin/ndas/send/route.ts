@@ -61,8 +61,9 @@ export async function POST(request: Request) {
       returnUrl
     );
 
-    await prisma.dataRoomAccess.update({
-      where: { id: access.id },
+    // Update ALL accesses for this contact (NDA is global)
+    await prisma.dataRoomAccess.updateMany({
+      where: { contactId: access.contactId },
       data: {
         ndaStatus: "sent",
         docusignEnvelopeId: envelopeId,

@@ -166,19 +166,19 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
         </div>
       </div>
 
-      {/* Client-side interactive section: tags, upload, file list */}
-      <RoomDetailClient
+      {/* Contact access management */}
+      <RoomAccessClient
         roomId={roomId}
-        initialFiles={initialFiles}
-        initialTags={initialTags}
+        initialAccesses={initialAccesses}
+        allContacts={allContacts}
       />
 
-      {/* Contact access management */}
+      {/* File list + drag-and-drop upload at bottom */}
       <div className="mt-6">
-        <RoomAccessClient
+        <RoomDetailClient
           roomId={roomId}
-          initialAccesses={initialAccesses}
-          allContacts={allContacts}
+          initialFiles={initialFiles}
+          initialTags={initialTags}
         />
       </div>
     </div>

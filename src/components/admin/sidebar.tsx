@@ -14,6 +14,7 @@ const navLinks: SidebarLink[] = [
   { href: "/admin/contacts", label: "Contacts" },
   { href: "/admin/ndas", label: "NDAs" },
   { href: "/admin/approvals", label: "Approvals" },
+  { href: "/admin/calendar", label: "Calendar" },
   { href: "/admin/receipts", label: "Weekly Receipts" },
   { href: "/admin/settings", label: "Settings" },
 ];

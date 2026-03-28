@@ -94,9 +94,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true });
   }
 
-  // Perform the transition
-  await prisma.dataRoomAccess.update({
-    where: { id: access.id },
+  // Perform the transition — propagate to ALL accesses for the same contact (NDA is global)
+  await prisma.dataRoomAccess.updateMany({
+    where: { contactId: access.contactId },
     data: { ndaStatus: targetStatus },
   });
 
