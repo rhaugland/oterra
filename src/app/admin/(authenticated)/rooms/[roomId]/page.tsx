@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { RoomDetailClient } from "@/components/admin/room-detail-client";
 import { ArchiveButtonClient } from "@/components/admin/archive-button-client";
+import { RoomAccessClient } from "@/components/admin/room-access-client";
 
 interface RoomDetailPageProps {
   params: Promise<{ roomId: string }>;
@@ -11,24 +12,31 @@ interface RoomDetailPageProps {
 export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   const { roomId } = await params;
 
-  const room = await prisma.dataRoom.findUnique({
-    where: { id: roomId },
-    include: {
-      files: {
-        where: { status: "ready" },
-        include: {
-          tags: { include: { tag: true } },
+  const [room, allContacts] = await Promise.all([
+    prisma.dataRoom.findUnique({
+      where: { id: roomId },
+      include: {
+        files: {
+          where: { status: "ready" },
+          include: {
+            tags: { include: { tag: true } },
+          },
+          orderBy: { createdAt: "desc" },
         },
-        orderBy: { createdAt: "desc" },
+        tags: {
+          orderBy: { name: "asc" },
+        },
+        accesses: {
+          include: { contact: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
-      tags: {
-        orderBy: { name: "asc" },
-      },
-      accesses: {
-        include: { contact: true },
-      },
-    },
-  });
+    }),
+    prisma.contact.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true, company: true },
+    }),
+  ]);
 
   if (!room) {
     notFound();
@@ -54,6 +62,19 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
     id: t.id,
     name: t.name,
     color: t.color,
+  }));
+
+  const initialAccesses = room.accesses.map((a) => ({
+    id: a.id,
+    contactId: a.contactId,
+    ndaStatus: a.ndaStatus as string,
+    approvalStatus: a.approvalStatus as string,
+    contact: {
+      id: a.contact.id,
+      name: a.contact.name,
+      email: a.contact.email,
+      company: a.contact.company,
+    },
   }));
 
   return (
@@ -111,6 +132,15 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
         initialFiles={initialFiles}
         initialTags={initialTags}
       />
+
+      {/* Contact access management */}
+      <div className="mt-6">
+        <RoomAccessClient
+          roomId={roomId}
+          initialAccesses={initialAccesses}
+          allContacts={allContacts}
+        />
+      </div>
     </div>
   );
 }
