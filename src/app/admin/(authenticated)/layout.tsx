@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth";
 import { Sidebar } from "@/components/admin/sidebar";
+import { EmailFab } from "@/components/admin/email-fab";
 import { prisma } from "@/lib/prisma";
 
 export default async function AuthenticatedAdminLayout({
@@ -35,6 +36,7 @@ export default async function AuthenticatedAdminLayout({
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar pendingCount={pendingCount} />
       <main className="flex-1 overflow-auto">{children}</main>
+      <EmailFab />
     </div>
   );
 }

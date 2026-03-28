@@ -38,6 +38,22 @@ function formatDate(iso: string) {
   });
 }
 
+function dispatchMagicLink(row: NdaRow) {
+  window.dispatchEvent(
+    new CustomEvent("email-fab:open", {
+      detail: {
+        contactId: row.contactId,
+        contactName: row.contactName,
+        contactEmail: row.contactEmail,
+        contactCompany: row.contactCompany,
+        action: "magic-link",
+        roomId: row.roomId,
+        roomName: row.roomName,
+      },
+    })
+  );
+}
+
 export function NdaTable({ rows }: NdaTableProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<string>("");
@@ -46,6 +62,8 @@ export function NdaTable({ rows }: NdaTableProps) {
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
+      // Exclude signed from this table — they go in the Complete section
+      if (r.ndaStatus === "signed") return false;
       if (filter && r.ndaStatus !== filter) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -109,7 +127,6 @@ export function NdaTable({ rows }: NdaTableProps) {
           <option value="">All statuses</option>
           <option value="not_sent">Not Sent</option>
           <option value="sent">Pending</option>
-          <option value="signed">Signed</option>
           <option value="declined">Declined</option>
         </select>
       </div>
@@ -117,7 +134,7 @@ export function NdaTable({ rows }: NdaTableProps) {
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <p className="text-sm">
-            {search || filter ? "No NDAs match your filters." : "No NDAs yet. Assign contacts to rooms first."}
+            {search || filter ? "No NDAs match your filters." : "No pending NDAs. All contacts are either signed or not yet assigned."}
           </p>
         </div>
       ) : (
@@ -193,9 +210,6 @@ export function NdaTable({ rows }: NdaTableProps) {
                             Email
                           </a>
                         )}
-                        {row.ndaStatus === "signed" && (
-                          <span className="text-xs text-green-600 font-medium">Complete</span>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -205,6 +219,88 @@ export function NdaTable({ rows }: NdaTableProps) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Complete section — signed NDAs with resend access ────────────────────────
+
+export function CompletedNdaTable({ rows }: NdaTableProps) {
+  const signed = rows.filter((r) => r.ndaStatus === "signed");
+
+  if (signed.length === 0) return null;
+
+  return (
+    <div className="mt-10">
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Complete</h2>
+        <p className="text-sm text-gray-500 mt-0.5">
+          Signed NDAs — resend data room access if a contact needs a reminder
+        </p>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Contact
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Data Room
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                NDA Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Signed
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {signed.map((row) => (
+              <tr key={row.accessId} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3">
+                  <Link href={`/admin/contacts/${row.contactId}`} className="block">
+                    <p className="text-sm font-medium text-gray-900">{row.contactName}</p>
+                    <p className="text-xs text-gray-500">
+                      {row.contactEmail}
+                      {row.contactCompany && ` · ${row.contactCompany}`}
+                    </p>
+                  </Link>
+                </td>
+                <td className="px-4 py-3">
+                  <Link href={`/admin/rooms/${row.roomId}`} className="text-sm text-ottera-red-600 hover:text-ottera-red-700">
+                    {row.roomName}
+                  </Link>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Signed
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-sm text-gray-500">{formatDate(row.createdAt)}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => dispatchMagicLink(row)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    Resend Data Room Access
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

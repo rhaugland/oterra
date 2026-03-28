@@ -143,7 +143,8 @@ const ndaPriority: Record<string, number> = {
   voided: 0,
 };
 
-function GlobalNdaStatus({ ndaStatuses }: { ndaStatuses: NdaStatusEntry[] }) {
+function GlobalNdaStatus({ contact }: { contact: ContactRow }) {
+  const { ndaStatuses } = contact;
   if (ndaStatuses.length === 0) {
     return <span className="text-gray-300 text-xs">—</span>;
   }
@@ -153,12 +154,61 @@ function GlobalNdaStatus({ ndaStatuses }: { ndaStatuses: NdaStatusEntry[] }) {
     (ndaPriority[a.ndaStatus] ?? 0) >= (ndaPriority[b.ndaStatus] ?? 0) ? a : b
   );
 
+  const isSigned = best.ndaStatus === "signed";
+
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ndaColors[best.ndaStatus] ?? "bg-gray-100 text-gray-600"}`}
-    >
-      {ndaLabels[best.ndaStatus] ?? best.ndaStatus}
-    </span>
+    <div className="flex items-center gap-1.5">
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ndaColors[best.ndaStatus] ?? "bg-gray-100 text-gray-600"}`}
+      >
+        {ndaLabels[best.ndaStatus] ?? best.ndaStatus}
+      </span>
+      {isSigned && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // If only one room, go straight to compose; otherwise let FAB show room selector
+            const rooms = ndaStatuses;
+            if (rooms.length === 1) {
+              window.dispatchEvent(
+                new CustomEvent("email-fab:open", {
+                  detail: {
+                    contactId: contact.id,
+                    contactName: contact.name,
+                    contactEmail: contact.email,
+                    contactCompany: contact.company,
+                    action: "magic-link",
+                    roomId: rooms[0].roomId,
+                    roomName: rooms[0].roomName,
+                  },
+                })
+              );
+            } else {
+              window.dispatchEvent(
+                new CustomEvent("email-fab:open", {
+                  detail: {
+                    contactId: contact.id,
+                    contactName: contact.name,
+                    contactEmail: contact.email,
+                    contactCompany: contact.company,
+                    action: "magic-link",
+                    rooms: rooms.map((r) => ({ roomId: r.roomId, roomName: r.roomName })),
+                  },
+                })
+              );
+            }
+          }}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60 transition-colors"
+          title="Send data room access"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          Send Access
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -599,7 +649,7 @@ export function ContactTable({ contacts, dataRooms }: ContactTableProps) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <GlobalNdaStatus ndaStatuses={contact.ndaStatuses} />
+                    <GlobalNdaStatus contact={contact} />
                   </td>
                   <td className="px-4 py-3">
                     <SendButtons contactId={contact.id} contactEmail={contact.email} />

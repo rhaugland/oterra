@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { NdaTable } from "@/components/admin/nda-table";
+import { NdaTable, CompletedNdaTable } from "@/components/admin/nda-table";
 
 export default async function NdasPage() {
   const accesses = await prisma.dataRoomAccess.findMany({
@@ -66,6 +66,7 @@ export default async function NdasPage() {
       </div>
 
       <NdaTable rows={ndaRows} />
+      <CompletedNdaTable rows={ndaRows} />
     </div>
   );
 }
