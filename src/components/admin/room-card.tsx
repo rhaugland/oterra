@@ -1,5 +1,12 @@
 import Link from "next/link";
 
+interface NdaCounts {
+  signed: number;
+  sent: number;
+  not_sent: number;
+  declined: number;
+}
+
 interface ApprovalCounts {
   approved: number;
   pending: number;
@@ -13,6 +20,7 @@ interface RoomCardProps {
   status: "active" | "archived";
   fileCount: number;
   contactCount: number;
+  ndaCounts: NdaCounts;
   approvalCounts: ApprovalCounts;
 }
 
@@ -23,8 +31,11 @@ export function RoomCard({
   status,
   fileCount,
   contactCount,
+  ndaCounts,
   approvalCounts,
 }: RoomCardProps) {
+  const hasContacts = contactCount > 0;
+
   return (
     <Link
       href={`/admin/rooms/${id}`}
@@ -47,32 +58,48 @@ export function RoomCard({
 
       <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
         <span>{fileCount} {fileCount === 1 ? "file" : "files"}</span>
-        <span className="text-gray-300">•</span>
+        <span className="text-gray-300">&bull;</span>
         <span>{contactCount} {contactCount === 1 ? "contact" : "contacts"}</span>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        {approvalCounts.approved > 0 && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            {approvalCounts.approved} approved
-          </span>
-        )}
-        {approvalCounts.pending > 0 && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            {approvalCounts.pending} pending
-          </span>
-        )}
-        {approvalCounts.denied > 0 && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            {approvalCounts.denied} denied
-          </span>
-        )}
-        {approvalCounts.approved === 0 &&
-          approvalCounts.pending === 0 &&
-          approvalCounts.denied === 0 && (
-            <span className="text-xs text-gray-400">No accesses</span>
+      {hasContacts ? (
+        <div className="space-y-2">
+          {/* NDA Status */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {ndaCounts.signed > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {ndaCounts.signed} signed
+              </span>
+            )}
+            {ndaCounts.sent > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                {ndaCounts.sent} pending
+              </span>
+            )}
+            {ndaCounts.not_sent > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                {ndaCounts.not_sent} not sent
+              </span>
+            )}
+            {ndaCounts.declined > 0 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                {ndaCounts.declined} declined
+              </span>
+            )}
+          </div>
+
+          {/* Approval Status */}
+          {approvalCounts.approved > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                {approvalCounts.approved} approved
+              </span>
+            </div>
           )}
-      </div>
+        </div>
+      ) : (
+        <span className="text-xs text-gray-400">No contacts</span>
+      )}
     </Link>
   );
 }

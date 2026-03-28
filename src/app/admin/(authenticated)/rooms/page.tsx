@@ -11,7 +11,7 @@ export default async function RoomsPage() {
         select: { id: true },
       },
       accesses: {
-        select: { approvalStatus: true, contactId: true },
+        select: { approvalStatus: true, ndaStatus: true, contactId: true },
       },
     },
   });
@@ -25,6 +25,12 @@ export default async function RoomsPage() {
       status: room.status as "active" | "archived",
       fileCount: room.files.length,
       contactCount: uniqueContactIds.size,
+      ndaCounts: {
+        signed: room.accesses.filter((a) => a.ndaStatus === "signed").length,
+        sent: room.accesses.filter((a) => a.ndaStatus === "sent").length,
+        not_sent: room.accesses.filter((a) => a.ndaStatus === "not_sent").length,
+        declined: room.accesses.filter((a) => a.ndaStatus === "declined").length,
+      },
       approvalCounts: {
         approved: room.accesses.filter((a) => a.approvalStatus === "approved")
           .length,

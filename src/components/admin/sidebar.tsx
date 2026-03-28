@@ -10,8 +10,9 @@ interface SidebarLink {
 }
 
 const navLinks: SidebarLink[] = [
-  { href: "/admin/rooms", label: "Rooms" },
+  { href: "/admin/rooms", label: "Data Rooms" },
   { href: "/admin/contacts", label: "Contacts" },
+  { href: "/admin/ndas", label: "NDAs" },
   { href: "/admin/approvals", label: "Approvals" },
   { href: "/admin/audit-log", label: "Audit Log" },
   { href: "/admin/settings", label: "Settings" },

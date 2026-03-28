@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface NdaStatusEntry {
   roomId: string;
@@ -39,8 +40,14 @@ interface ContactRow {
   recentViews: RecentView[];
 }
 
+interface DataRoomOption {
+  id: string;
+  name: string;
+}
+
 interface ContactTableProps {
   contacts: ContactRow[];
+  dataRooms: DataRoomOption[];
 }
 
 // ── Label maps ────────────────────────────────────────────────────────────────
@@ -108,21 +115,6 @@ const ndaLabels: Record<string, string> = {
 };
 
 // ── Small badge helpers ───────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-gray-100 text-gray-600",
-    invited: "bg-blue-100 text-blue-800",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] ?? "bg-gray-100 text-gray-600"}`}
-    >
-      {status}
-    </span>
-  );
-}
 
 function Badge({
   value,
@@ -215,7 +207,7 @@ function ViewsCell({
 
 // ── Sort types ────────────────────────────────────────────────────────────────
 
-type SortKey = "name" | "company" | "status" | "investorType" | "geography" | "checkSize" | "roomCount" | "viewCount";
+type SortKey = "name" | "company" | "investorType" | "geography" | "checkSize" | "roomCount" | "viewCount";
 type SortDir = "asc" | "desc";
 
 function SortHeader({
@@ -276,9 +268,98 @@ function FilterSelect({
   );
 }
 
+// ── Add-to-room dropdown ──────────────────────────────────────────────────────
+
+function AddToRoomDropdown({
+  contactId,
+  assignedRoomIds,
+  dataRooms,
+}: {
+  contactId: string;
+  assignedRoomIds: string[];
+  dataRooms: DataRoomOption[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  const available = dataRooms.filter((r) => !assignedRoomIds.includes(r.id));
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  async function assign(roomId: string) {
+    setLoading(roomId);
+    try {
+      const res = await fetch(`/api/admin/rooms/${roomId}/access`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId, dataRoomId: roomId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? "Failed to assign");
+      } else {
+        router.refresh();
+        setOpen(false);
+      }
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-xs font-bold leading-none transition-colors"
+        title="Add to data room"
+      >
+        +
+      </button>
+      {open && (
+        <div className="absolute z-50 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg w-56 py-1">
+          {available.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-gray-400">
+              Already in all rooms
+            </div>
+          ) : (
+            available.map((room) => (
+              <button
+                key={room.id}
+                disabled={loading === room.id}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  assign(room.id);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                {loading === room.id ? "Assigning..." : room.name}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function ContactTable({ contacts }: ContactTableProps) {
+export function ContactTable({ contacts, dataRooms }: ContactTableProps) {
   const [search, setSearch] = useState("");
   const [filterInvestorType, setFilterInvestorType] = useState("");
   const [filterGeography, setFilterGeography] = useState("");
@@ -319,7 +400,6 @@ export function ContactTable({ contacts }: ContactTableProps) {
 
       if (sortKey === "name") { aVal = a.name; bVal = b.name; }
       else if (sortKey === "company") { aVal = a.company ?? ""; bVal = b.company ?? ""; }
-      else if (sortKey === "status") { aVal = a.status; bVal = b.status; }
       else if (sortKey === "investorType") { aVal = a.investorType ?? ""; bVal = b.investorType ?? ""; }
       else if (sortKey === "geography") { aVal = a.geography ?? ""; bVal = b.geography ?? ""; }
       else if (sortKey === "checkSize") { aVal = a.checkSize ?? ""; bVal = b.checkSize ?? ""; }
@@ -396,11 +476,10 @@ export function ContactTable({ contacts }: ContactTableProps) {
               <tr>
                 <SortHeader label="Name" sortKey="name" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortHeader label="Company" sortKey="company" current={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortHeader label="Status" sortKey="status" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortHeader label="Investor Type" sortKey="investorType" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortHeader label="Geography" sortKey="geography" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortHeader label="Check Size" sortKey="checkSize" current={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortHeader label="Rooms" sortKey="roomCount" current={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortHeader label="Data Rooms" sortKey="roomCount" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   NDA Status
                 </th>
@@ -426,11 +505,6 @@ export function ContactTable({ contacts }: ContactTableProps) {
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/admin/contacts/${contact.id}`} className="block">
-                      <StatusBadge status={contact.status} />
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/contacts/${contact.id}`} className="block">
                       <Badge value={contact.investorType} labels={investorTypeLabels} colors={investorTypeColors} />
                     </Link>
                   </td>
@@ -445,9 +519,16 @@ export function ContactTable({ contacts }: ContactTableProps) {
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/admin/contacts/${contact.id}`} className="block">
-                      <span className="text-sm text-gray-600">{contact.roomCount}</span>
-                    </Link>
+                    <span className="inline-flex items-center">
+                      <Link href={`/admin/contacts/${contact.id}`}>
+                        <span className="text-sm text-gray-600">{contact.roomCount}</span>
+                      </Link>
+                      <AddToRoomDropdown
+                        contactId={contact.id}
+                        assignedRoomIds={contact.ndaStatuses.map((s) => s.roomId)}
+                        dataRooms={dataRooms}
+                      />
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <NdaStatusCell ndaStatuses={contact.ndaStatuses} />

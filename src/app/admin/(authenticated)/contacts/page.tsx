@@ -50,6 +50,12 @@ export default async function ContactsPage() {
     logsByContact.set(log.actorId, existing);
   }
 
+  const allRooms = await prisma.dataRoom.findMany({
+    where: { status: "active" },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
   const contactRows = contacts.map((contact) => {
     const logs = logsByContact.get(contact.id) ?? [];
     const recentViews = logs.slice(0, 10).map((l) => {
@@ -102,7 +108,7 @@ export default async function ContactsPage() {
         <AddContactForm />
       </div>
 
-      <ContactTable contacts={contactRows} />
+      <ContactTable contacts={contactRows} dataRooms={allRooms} />
     </div>
   );
 }
