@@ -44,7 +44,53 @@ export async function GET(
     return NextResponse.json({ error: "Room not found" }, { status: 404 });
   }
 
-  return NextResponse.json(room);
+  // Gather file IDs and contact IDs for this room
+  const fileIds = room.files.map((f) => f.id);
+  const contactIds = room.accesses.map((a) => a.contactId);
+
+  // Fetch file.download audit entries for this room's files
+  const auditLogs =
+    fileIds.length > 0 && contactIds.length > 0
+      ? await prisma.auditLog.findMany({
+          where: {
+            actorType: "contact",
+            actorId: { in: contactIds },
+            action: "file.download",
+            resourceId: { in: fileIds },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+
+  const fileMap = new Map(room.files.map((f) => [f.id, f]));
+
+  // Group by contactId
+  const logsByContact = new Map<string, typeof auditLogs>();
+  for (const log of auditLogs) {
+    const existing = logsByContact.get(log.actorId) ?? [];
+    existing.push(log);
+    logsByContact.set(log.actorId, existing);
+  }
+
+  const accessesWithViews = room.accesses.map((a) => {
+    const logs = logsByContact.get(a.contactId) ?? [];
+    const recentViews = logs.slice(0, 10).map((l) => {
+      const file = fileMap.get(l.resourceId);
+      return {
+        id: l.id,
+        fileId: l.resourceId,
+        fileName: file?.name ?? "Unknown file",
+        timestamp: l.createdAt.toISOString(),
+      };
+    });
+    return {
+      ...a,
+      viewCount: logs.length,
+      recentViews,
+    };
+  });
+
+  return NextResponse.json({ ...room, accesses: accessesWithViews });
 }
 
 export async function PATCH(

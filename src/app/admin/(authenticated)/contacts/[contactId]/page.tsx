@@ -150,6 +150,39 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
     notFound();
   }
 
+  // Fetch all file.download audit log entries for this contact
+  const auditLogs = await prisma.auditLog.findMany({
+    where: {
+      actorType: "contact",
+      actorId: contactId,
+      action: "file.download",
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Resolve file details
+  const fileIds = [...new Set(auditLogs.map((l) => l.resourceId))];
+  const files =
+    fileIds.length > 0
+      ? await prisma.file.findMany({
+          where: { id: { in: fileIds } },
+          include: { dataRoom: { select: { id: true, name: true } } },
+        })
+      : [];
+
+  const fileMap = new Map(files.map((f) => [f.id, f]));
+
+  const fileActivity = auditLogs.map((l) => {
+    const file = fileMap.get(l.resourceId);
+    return {
+      id: l.id,
+      fileName: file?.name ?? "Unknown file",
+      roomId: file?.dataRoomId ?? null,
+      roomName: file?.dataRoom?.name ?? "Unknown room",
+      timestamp: l.createdAt.toISOString(),
+    };
+  });
+
   return (
     <div className="p-8 max-w-3xl mx-auto">
       {/* Breadcrumb */}
@@ -189,11 +222,16 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
             {contact.accesses.length}{" "}
             {contact.accesses.length === 1 ? "room assignment" : "room assignments"}
           </span>
+          <span className="text-gray-200">•</span>
+          <span>
+            {fileActivity.length}{" "}
+            {fileActivity.length === 1 ? "file view" : "file views"}
+          </span>
         </div>
       </div>
 
       {/* Room assignments */}
-      <div>
+      <div className="mb-6">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Room Assignments</h2>
 
         {contact.accesses.length === 0 ? (
@@ -218,6 +256,55 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
                 <div className="flex items-center gap-2">
                   <NdaBadge status={access.ndaStatus} />
                   <ApprovalBadge status={access.approvalStatus} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* File Activity */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">
+          File Activity
+          {fileActivity.length > 0 && (
+            <span className="ml-2 text-xs font-normal text-gray-400">
+              {fileActivity.length} {fileActivity.length === 1 ? "download" : "downloads"}
+            </span>
+          )}
+        </h2>
+
+        {fileActivity.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+            <p className="text-sm text-gray-400">No file activity yet.</p>
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+            {fileActivity.map((entry) => (
+              <div key={entry.id} className="px-4 py-3 flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 truncate">{entry.fileName}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {entry.roomId ? (
+                      <Link
+                        href={`/admin/rooms/${entry.roomId}`}
+                        className="text-indigo-600 hover:text-indigo-800 transition-colors"
+                      >
+                        {entry.roomName}
+                      </Link>
+                    ) : (
+                      entry.roomName
+                    )}
+                  </p>
+                </div>
+                <div className="text-xs text-gray-400 shrink-0 ml-4">
+                  {new Date(entry.timestamp).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </div>
               </div>
             ))}

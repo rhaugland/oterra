@@ -10,12 +10,21 @@ interface Contact {
   company?: string | null;
 }
 
+interface RecentView {
+  id: string;
+  fileId: string;
+  fileName: string;
+  timestamp: string;
+}
+
 interface AccessRecord {
   id: string;
   contactId: string;
   ndaStatus: string;
   approvalStatus: string;
   contact: Contact;
+  viewCount?: number;
+  recentViews?: RecentView[];
 }
 
 interface AllContact {
@@ -68,6 +77,48 @@ function ApprovalBadge({ status }: { status: string }) {
     >
       {status}
     </span>
+  );
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function ViewsPopover({
+  viewCount,
+  recentViews,
+}: {
+  viewCount: number;
+  recentViews: RecentView[];
+}) {
+  if (viewCount === 0) {
+    return <span className="text-xs text-gray-400">0 views</span>;
+  }
+
+  return (
+    <div className="relative group inline-block">
+      <span className="text-xs text-gray-600 cursor-pointer underline decoration-dotted">
+        {viewCount} {viewCount === 1 ? "view" : "views"}
+      </span>
+      <div className="absolute z-50 hidden group-hover:block bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-72 right-0 top-full mt-1">
+        <div className="text-xs font-semibold text-gray-700 mb-2">Files Viewed</div>
+        {recentViews.map((v) => (
+          <div key={v.id} className="text-xs text-gray-600 py-1 border-b border-gray-100 last:border-0">
+            <div className="font-medium text-gray-800 truncate">{v.fileName}</div>
+            <div className="text-gray-500">{formatDate(v.timestamp)}</div>
+          </div>
+        ))}
+        {viewCount > 10 && (
+          <div className="text-xs text-gray-400 pt-1">
+            +{viewCount - 10} more — see contact detail
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -136,7 +187,13 @@ function AccessRow({ access, roomId, onRefresh }: AccessRowProps) {
           <NdaBadge status={access.ndaStatus} />
           <ApprovalBadge status={access.approvalStatus} />
         </div>
-        <p className="text-xs text-gray-500">{access.contact.email}</p>
+        <div className="flex items-center gap-3 mt-0.5">
+          <p className="text-xs text-gray-500">{access.contact.email}</p>
+          <ViewsPopover
+            viewCount={access.viewCount ?? 0}
+            recentViews={access.recentViews ?? []}
+          />
+        </div>
         {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       </div>
 

@@ -3,6 +3,22 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 
+interface NdaStatusEntry {
+  roomId: string;
+  roomName: string;
+  ndaStatus: string;
+  approvalStatus: string;
+}
+
+interface RecentView {
+  id: string;
+  fileId: string;
+  fileName: string;
+  roomId: string | null;
+  roomName: string;
+  timestamp: string;
+}
+
 interface ContactRow {
   id: string;
   name: string;
@@ -18,6 +34,9 @@ interface ContactRow {
     pending: number;
     denied: number;
   };
+  ndaStatuses: NdaStatusEntry[];
+  viewCount: number;
+  recentViews: RecentView[];
 }
 
 interface ContactTableProps {
@@ -72,6 +91,22 @@ const checkSizeColors: Record<string, string> = {
   large: "bg-emerald-100 text-emerald-800",
 };
 
+const ndaColors: Record<string, string> = {
+  not_sent: "bg-gray-100 text-gray-600",
+  sent: "bg-yellow-100 text-yellow-800",
+  signed: "bg-green-100 text-green-800",
+  declined: "bg-red-100 text-red-700",
+  voided: "bg-gray-100 text-gray-500",
+};
+
+const ndaLabels: Record<string, string> = {
+  not_sent: "Not Sent",
+  sent: "Sent",
+  signed: "Signed",
+  declined: "Declined",
+  voided: "Voided",
+};
+
 // ── Small badge helpers ───────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
@@ -108,9 +143,79 @@ function Badge({
   );
 }
 
+function NdaStatusCell({ ndaStatuses }: { ndaStatuses: NdaStatusEntry[] }) {
+  if (ndaStatuses.length === 0) {
+    return <span className="text-gray-300 text-xs">—</span>;
+  }
+
+  // Summarise by ndaStatus value
+  const counts: Record<string, number> = {};
+  for (const entry of ndaStatuses) {
+    counts[entry.ndaStatus] = (counts[entry.ndaStatus] ?? 0) + 1;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {Object.entries(counts).map(([status, count]) => (
+        <span
+          key={status}
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ndaColors[status] ?? "bg-gray-100 text-gray-600"}`}
+        >
+          {count > 1 ? `${count} ` : ""}
+          {ndaLabels[status] ?? status}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function ViewsCell({
+  viewCount,
+  recentViews,
+}: {
+  viewCount: number;
+  recentViews: RecentView[];
+}) {
+  if (viewCount === 0) {
+    return <span className="text-gray-300 text-xs">0</span>;
+  }
+
+  return (
+    <div className="relative group inline-block">
+      <span className="text-sm text-gray-700 cursor-pointer underline decoration-dotted">
+        {viewCount} {viewCount === 1 ? "view" : "views"}
+      </span>
+      <div className="absolute z-50 hidden group-hover:block bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-72 -left-2 top-full mt-1">
+        <div className="text-xs font-semibold text-gray-700 mb-2">Files Viewed</div>
+        {recentViews.map((v) => (
+          <div key={v.id} className="text-xs text-gray-600 py-1 border-b border-gray-100 last:border-0">
+            <div className="font-medium text-gray-800 truncate">{v.fileName}</div>
+            <div className="text-gray-500">
+              {v.roomName} · {formatDate(v.timestamp)}
+            </div>
+          </div>
+        ))}
+        {viewCount > 10 && (
+          <div className="text-xs text-gray-400 pt-1">
+            +{viewCount - 10} more — see contact detail
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Sort types ────────────────────────────────────────────────────────────────
 
-type SortKey = "name" | "company" | "status" | "investorType" | "geography" | "checkSize" | "roomCount";
+type SortKey = "name" | "company" | "status" | "investorType" | "geography" | "checkSize" | "roomCount" | "viewCount";
 type SortDir = "asc" | "desc";
 
 function SortHeader({
@@ -219,6 +324,7 @@ export function ContactTable({ contacts }: ContactTableProps) {
       else if (sortKey === "geography") { aVal = a.geography ?? ""; bVal = b.geography ?? ""; }
       else if (sortKey === "checkSize") { aVal = a.checkSize ?? ""; bVal = b.checkSize ?? ""; }
       else if (sortKey === "roomCount") { aVal = a.roomCount; bVal = b.roomCount; }
+      else if (sortKey === "viewCount") { aVal = a.viewCount; bVal = b.viewCount; }
 
       if (typeof aVal === "number" && typeof bVal === "number") {
         return sortDir === "asc" ? aVal - bVal : bVal - aVal;
@@ -295,6 +401,10 @@ export function ContactTable({ contacts }: ContactTableProps) {
                 <SortHeader label="Geography" sortKey="geography" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortHeader label="Check Size" sortKey="checkSize" current={sortKey} dir={sortDir} onSort={handleSort} />
                 <SortHeader label="Rooms" sortKey="roomCount" current={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  NDA Status
+                </th>
+                <SortHeader label="Views" sortKey="viewCount" current={sortKey} dir={sortDir} onSort={handleSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -338,6 +448,12 @@ export function ContactTable({ contacts }: ContactTableProps) {
                     <Link href={`/admin/contacts/${contact.id}`} className="block">
                       <span className="text-sm text-gray-600">{contact.roomCount}</span>
                     </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <NdaStatusCell ndaStatuses={contact.ndaStatuses} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <ViewsCell viewCount={contact.viewCount} recentViews={contact.recentViews} />
                   </td>
                 </tr>
               ))}

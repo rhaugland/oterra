@@ -42,6 +42,32 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
     notFound();
   }
 
+  // Fetch per-contact view counts for files in this room
+  const fileIds = room.files.map((f) => f.id);
+  const contactIds = room.accesses.map((a) => a.contactId);
+
+  const auditLogs =
+    fileIds.length > 0 && contactIds.length > 0
+      ? await prisma.auditLog.findMany({
+          where: {
+            actorType: "contact",
+            actorId: { in: contactIds },
+            action: "file.download",
+            resourceId: { in: fileIds },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+
+  const fileMap = new Map(room.files.map((f) => [f.id, f]));
+
+  const logsByContact = new Map<string, typeof auditLogs>();
+  for (const log of auditLogs) {
+    const existing = logsByContact.get(log.actorId) ?? [];
+    existing.push(log);
+    logsByContact.set(log.actorId, existing);
+  }
+
   const initialFiles = room.files.map((f) => ({
     id: f.id,
     name: f.name,
@@ -64,18 +90,32 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
     color: t.color,
   }));
 
-  const initialAccesses = room.accesses.map((a) => ({
-    id: a.id,
-    contactId: a.contactId,
-    ndaStatus: a.ndaStatus as string,
-    approvalStatus: a.approvalStatus as string,
-    contact: {
-      id: a.contact.id,
-      name: a.contact.name,
-      email: a.contact.email,
-      company: a.contact.company,
-    },
-  }));
+  const initialAccesses = room.accesses.map((a) => {
+    const logs = logsByContact.get(a.contactId) ?? [];
+    const recentViews = logs.slice(0, 10).map((l) => {
+      const file = fileMap.get(l.resourceId);
+      return {
+        id: l.id,
+        fileId: l.resourceId,
+        fileName: file?.name ?? "Unknown file",
+        timestamp: l.createdAt.toISOString(),
+      };
+    });
+    return {
+      id: a.id,
+      contactId: a.contactId,
+      ndaStatus: a.ndaStatus as string,
+      approvalStatus: a.approvalStatus as string,
+      contact: {
+        id: a.contact.id,
+        name: a.contact.name,
+        email: a.contact.email,
+        company: a.contact.company,
+      },
+      viewCount: logs.length,
+      recentViews,
+    };
+  });
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
