@@ -119,7 +119,7 @@ export function TagManager({ roomId, tags, onTagsChange }: TagManagerProps) {
           onChange={(e) => setNewTagName(e.target.value)}
           placeholder="New tag name"
           maxLength={100}
-          className="flex-1 text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="flex-1 text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-ottera-red-600 focus:border-ottera-red-600"
         />
         <div className="flex items-center gap-1">
           {DEFAULT_COLORS.map((color) => (
@@ -138,7 +138,7 @@ export function TagManager({ roomId, tags, onTagsChange }: TagManagerProps) {
         <button
           type="submit"
           disabled={isCreating || !newTagName.trim()}
-          className="text-sm px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="text-sm px-3 py-1.5 bg-ottera-red-600 text-white rounded-md hover:bg-ottera-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isCreating ? "Adding..." : "Add"}
         </button>

@@ -142,7 +142,7 @@ export default function SettingsPage() {
               onClick={() => setActiveTab(tab)}
               className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab
-                  ? "border-indigo-600 text-indigo-600"
+                  ? "border-ottera-red-600 text-ottera-red-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
@@ -184,7 +184,7 @@ export default function SettingsPage() {
             {isAdmin && (
               <button
                 onClick={() => { setShowInviteForm(true); setInviteError(null); setInviteSuccess(null); }}
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-ottera-red-600 text-white text-sm font-medium rounded-md hover:bg-ottera-red-700 transition-colors"
               >
                 + Invite Team Member
               </button>
@@ -235,7 +235,7 @@ export default function SettingsPage() {
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                               member.role === "admin"
-                                ? "bg-indigo-100 text-indigo-700"
+                                ? "bg-ottera-red-100 text-ottera-red-700"
                                 : "bg-gray-100 text-gray-600"
                             }`}
                           >
@@ -280,7 +280,7 @@ export default function SettingsPage() {
                       required
                       value={inviteName}
                       onChange={(e) => setInviteName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ottera-red-600"
                     />
                   </div>
                   <div>
@@ -292,7 +292,7 @@ export default function SettingsPage() {
                       required
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ottera-red-600"
                     />
                   </div>
                   <div>
@@ -302,7 +302,7 @@ export default function SettingsPage() {
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ottera-red-600 bg-white"
                     >
                       <option value="member">Member</option>
                       <option value="admin">Admin</option>
@@ -322,7 +322,7 @@ export default function SettingsPage() {
                     <button
                       type="submit"
                       disabled={inviteSubmitting}
-                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                      className="px-4 py-2 text-sm font-medium text-white bg-ottera-red-600 rounded-md hover:bg-ottera-red-700 disabled:opacity-50 transition-colors"
                     >
                       {inviteSubmitting ? "Inviting..." : "Send Invite"}
                     </button>
@@ -340,8 +340,8 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">NDA Template</h2>
           <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-2xl">
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex-shrink-0 w-10 h-10 bg-ottera-red-100 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-ottera-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
@@ -360,7 +360,7 @@ export default function SettingsPage() {
                   href="https://admin.docusign.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 transition-colors"
+                  className="inline-flex items-center px-4 py-2 bg-ottera-red-600 text-white text-sm font-medium rounded-md hover:bg-ottera-red-700 transition-colors"
                 >
                   Open DocuSign Admin Console
                   <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

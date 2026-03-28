@@ -77,7 +77,7 @@ export function Dialog({
           )}
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+            className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ottera-red-600 rounded"
             aria-label="Close dialog"
           >
             <svg

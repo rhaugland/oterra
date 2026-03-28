@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, AuthError } from "@/lib/auth-admin";
+import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
 const updateRoomSchema = z.object({
@@ -144,4 +145,49 @@ export async function PATCH(
   });
 
   return NextResponse.json(room);
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  let user;
+  try {
+    user = await requireAdmin(request);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    throw err;
+  }
+
+  const { roomId } = await params;
+
+  const room = await prisma.dataRoom.findUnique({ where: { id: roomId } });
+  if (!room) {
+    return NextResponse.json({ error: "Room not found" }, { status: 404 });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const files = await tx.file.findMany({ where: { dataRoomId: roomId }, select: { id: true } });
+    const fileIds = files.map((f) => f.id);
+    if (fileIds.length > 0) {
+      await tx.fileTag.deleteMany({ where: { fileId: { in: fileIds } } });
+      await tx.file.deleteMany({ where: { dataRoomId: roomId } });
+    }
+    await tx.dataRoomAccess.deleteMany({ where: { dataRoomId: roomId } });
+    await tx.tag.deleteMany({ where: { dataRoomId: roomId } });
+    await tx.dataRoom.delete({ where: { id: roomId } });
+  });
+
+  await logAudit({
+    action: "data_room.deleted",
+    actorType: "user",
+    actorId: user.id,
+    resourceType: "DataRoom",
+    resourceId: roomId,
+    metadata: { roomName: room.name },
+  });
+
+  return NextResponse.json({ success: true });
 }

@@ -61,7 +61,7 @@ function ActionBadge({ action }: { action: string }) {
     ? "bg-green-100 text-green-800"
     : isDeny
     ? "bg-red-100 text-red-700"
-    : "bg-indigo-100 text-indigo-800";
+    : "bg-ottera-red-100 text-ottera-red-700";
   return <span className={`${baseClass} ${colorClass}`}>{action}</span>;
 }
 
@@ -140,7 +140,7 @@ export function AuditTable() {
           <select
             value={filterAction}
             onChange={(e) => setFilterAction(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ottera-red-600"
           >
             <option value="">All actions</option>
             {ACTION_OPTIONS.map((a) => (
@@ -156,7 +156,7 @@ export function AuditTable() {
           <select
             value={filterActorType}
             onChange={(e) => setFilterActorType(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ottera-red-600"
           >
             <option value="">All actor types</option>
             {ACTOR_TYPE_OPTIONS.map((t) => (
@@ -172,7 +172,7 @@ export function AuditTable() {
           <select
             value={filterResourceType}
             onChange={(e) => setFilterResourceType(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ottera-red-600"
           >
             <option value="">All resources</option>
             {RESOURCE_TYPE_OPTIONS.map((r) => (
@@ -189,7 +189,7 @@ export function AuditTable() {
             type="date"
             value={filterFrom}
             onChange={(e) => setFilterFrom(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ottera-red-600"
           />
         </div>
 
@@ -199,7 +199,7 @@ export function AuditTable() {
             type="date"
             value={filterTo}
             onChange={(e) => setFilterTo(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ottera-red-600"
           />
         </div>
 
@@ -289,7 +289,7 @@ export function AuditTable() {
             <button
               onClick={() => void loadMore()}
               disabled={loadingMore}
-              className="px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-300 rounded-md hover:bg-indigo-50 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-ottera-red-600 border border-ottera-red-600/30 rounded-md hover:bg-ottera-red-50 disabled:opacity-50 transition-colors"
             >
               {loadingMore ? "Loading..." : "Load more"}
             </button>

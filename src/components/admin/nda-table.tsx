@@ -99,12 +99,12 @@ export function NdaTable({ rows }: NdaTableProps) {
           placeholder="Search contacts or rooms..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ottera-red-600"
         />
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-ottera-red-600 bg-white"
         >
           <option value="">All statuses</option>
           <option value="not_sent">Not Sent</option>
@@ -161,7 +161,7 @@ export function NdaTable({ rows }: NdaTableProps) {
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/admin/rooms/${row.roomId}`} className="text-sm text-indigo-600 hover:text-indigo-800">
+                      <Link href={`/admin/rooms/${row.roomId}`} className="text-sm text-ottera-red-600 hover:text-ottera-red-700">
                         {row.roomName}
                       </Link>
                     </td>
@@ -179,7 +179,7 @@ export function NdaTable({ rows }: NdaTableProps) {
                           <button
                             onClick={() => handleSendNda(row.accessId)}
                             disabled={isSending}
-                            className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                            className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-ottera-red-600 text-white hover:bg-ottera-red-700 disabled:opacity-50 transition-colors"
                           >
                             {isSending ? "Sending..." : canResend ? "Resend NDA" : "Send NDA"}
                           </button>

@@ -105,7 +105,7 @@ export default async function ContactsPage() {
             {contacts.length} {contacts.length === 1 ? "contact" : "contacts"} total
           </p>
         </div>
-        <AddContactForm />
+        <AddContactForm dataRooms={allRooms} />
       </div>
 
       <ContactTable contacts={contactRows} dataRooms={allRooms} />

@@ -48,7 +48,7 @@ function InvestorTypeBadge({ value }: { value: string | null }) {
   const colors: Record<string, string> = {
     family_office: "bg-purple-100 text-purple-800",
     venture_capital: "bg-blue-100 text-blue-800",
-    private_equity: "bg-indigo-100 text-indigo-800",
+    private_equity: "bg-ottera-red-100 text-ottera-red-700",
     strategic_corporate: "bg-teal-100 text-teal-800",
     other: "bg-gray-100 text-gray-600",
   };
@@ -245,7 +245,7 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
                 <div>
                   <Link
                     href={`/admin/rooms/${access.dataRoom.id}`}
-                    className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                    className="text-sm font-medium text-ottera-red-600 hover:text-ottera-red-700 transition-colors"
                   >
                     {access.dataRoom.name}
                   </Link>
@@ -288,7 +288,7 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
                     {entry.roomId ? (
                       <Link
                         href={`/admin/rooms/${entry.roomId}`}
-                        className="text-indigo-600 hover:text-indigo-800 transition-colors"
+                        className="text-ottera-red-600 hover:text-ottera-red-700 transition-colors"
                       >
                         {entry.roomName}
                       </Link>

@@ -239,7 +239,7 @@ export default function NewRoomPage() {
   return (
     <div className="p-8 max-w-3xl">
       <div className="mb-6">
-        <Link href="/admin/rooms" className="text-sm text-indigo-600 hover:text-indigo-800">
+        <Link href="/admin/rooms" className="text-sm text-ottera-red-600 hover:text-ottera-red-700">
           &larr; Back to Rooms
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">Create Data Room</h1>
@@ -267,7 +267,7 @@ export default function NewRoomPage() {
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={255}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ottera-red-600 focus:border-ottera-red-600"
               placeholder="e.g. Series A Due Diligence"
             />
           </div>
@@ -281,7 +281,7 @@ export default function NewRoomPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ottera-red-600 focus:border-ottera-red-600 resize-none"
               placeholder="Optional description for this data room"
             />
           </div>
@@ -298,8 +298,8 @@ export default function NewRoomPage() {
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
               dragging
-                ? "border-indigo-400 bg-indigo-50"
-                : "border-gray-300 hover:border-indigo-300 hover:bg-gray-50"
+                ? "border-ottera-red-600 bg-ottera-red-50"
+                : "border-gray-300 hover:border-ottera-red-600/30 hover:bg-gray-50"
             }`}
           >
             <input
@@ -352,7 +352,7 @@ export default function NewRoomPage() {
                 return (
                   <span
                     key={c.id}
-                    className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-indigo-50 text-indigo-800 rounded-full text-sm"
+                    className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 bg-ottera-red-50 text-ottera-red-700 rounded-full text-sm"
                   >
                     {c.name}
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${badge.cls}`}>
@@ -361,7 +361,7 @@ export default function NewRoomPage() {
                     <button
                       type="button"
                       onClick={() => toggleContact(c.id)}
-                      className="ml-0.5 text-indigo-400 hover:text-indigo-700"
+                      className="ml-0.5 text-ottera-red-600 hover:text-ottera-red-700"
                     >
                       <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -379,7 +379,7 @@ export default function NewRoomPage() {
             value={contactSearch}
             onChange={(e) => setContactSearch(e.target.value)}
             placeholder="Search contacts..."
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ottera-red-600 focus:border-ottera-red-600"
           />
 
           {/* Contact list */}
@@ -398,14 +398,14 @@ export default function NewRoomPage() {
                   <label
                     key={c.id}
                     className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      selected ? "bg-indigo-50/50" : ""
+                      selected ? "bg-ottera-red-50/50" : ""
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={selected}
                       onChange={() => toggleContact(c.id)}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded border-gray-300 text-ottera-red-600 focus:ring-ottera-red-600"
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
@@ -435,7 +435,7 @@ export default function NewRoomPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-5 py-2.5 bg-ottera-red-600 text-white text-sm font-medium rounded-lg hover:bg-ottera-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? (progress ?? "Creating...") : "Create Room"}
           </button>

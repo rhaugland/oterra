@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
               </div>
               <Link
                 href="/admin/login"
-                className="inline-block text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+                className="inline-block text-sm text-ottera-red-600 hover:text-ottera-red-600 font-medium"
               >
                 Go to sign in
               </Link>
@@ -107,7 +107,7 @@ export default function ResetPasswordPage() {
                     minLength={8}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 shadow-sm focus:border-ottera-red-600 focus:outline-none focus:ring-1 focus:ring-ottera-red-600 sm:text-sm"
                     placeholder="Minimum 8 characters"
                   />
                 </div>
@@ -116,7 +116,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={loading || !token}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-ottera-red-600 hover:bg-ottera-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ottera-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? "Updating…" : "Update password"}
               </button>

@@ -2,25 +2,32 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #333333;
+  --ottera-red: #DF1616;
+  --ottera-gold: #FBD76D;
+  --ottera-dark: #191919;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-ottera-red: var(--ottera-red);
+  --color-ottera-gold: var(--ottera-gold);
+  --color-ottera-dark: var(--ottera-dark);
+  --color-ottera-red-50: #FEF2F2;
+  --color-ottera-red-100: #FEE2E2;
+  --color-ottera-red-600: #DF1616;
+  --color-ottera-red-700: #C41313;
+  --color-ottera-red-800: #9B1010;
+  --color-ottera-gold-50: #FFFBEB;
+  --color-ottera-gold-100: #FEF3C7;
+  --color-ottera-gold-400: #FBD76D;
+  --color-ottera-gold-500: #F5C842;
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-jura);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

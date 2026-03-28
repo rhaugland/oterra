@@ -183,8 +183,8 @@ export function FileUpload({ roomId, onUploadComplete }: FileUploadProps) {
         onClick={() => inputRef.current?.click()}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
           dragging
-            ? "border-indigo-400 bg-indigo-50"
-            : "border-gray-300 hover:border-indigo-300 hover:bg-gray-50"
+            ? "border-ottera-red-600 bg-ottera-red-50"
+            : "border-gray-300 hover:border-ottera-red-600/30 hover:bg-gray-50"
         }`}
       >
         <input
@@ -226,7 +226,7 @@ export function FileUpload({ roomId, onUploadComplete }: FileUploadProps) {
               </div>
               <div className="w-full bg-gray-100 rounded-full h-1.5">
                 <div
-                  className="bg-indigo-500 h-1.5 rounded-full transition-all"
+                  className="bg-ottera-red-600 h-1.5 rounded-full transition-all"
                   style={{ width: `${u.progress}%` }}
                 />
               </div>

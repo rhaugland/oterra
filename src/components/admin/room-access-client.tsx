@@ -180,7 +180,7 @@ function AccessRow({ access, roomId, onRefresh }: AccessRowProps) {
         <div className="flex items-center gap-2">
           <Link
             href={`/admin/contacts/${access.contact.id}`}
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+            className="text-sm font-medium text-ottera-red-600 hover:text-ottera-red-700 transition-colors"
           >
             {access.contact.name}
           </Link>
@@ -291,7 +291,7 @@ function AssignContactForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-2 px-3 py-1.5 text-xs font-medium border border-dashed border-indigo-400 text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"
+        className="mt-2 px-3 py-1.5 text-xs font-medium border border-dashed border-ottera-red-600 text-ottera-red-600 rounded-md hover:bg-ottera-red-50 transition-colors"
       >
         + Assign Contact
       </button>
@@ -314,7 +314,7 @@ function AssignContactForm({
         placeholder="Search by name or email..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 mb-2"
+        className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-ottera-red-600 mb-2"
       />
       {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
       {available.length === 0 ? (

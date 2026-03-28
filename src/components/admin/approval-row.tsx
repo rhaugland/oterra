@@ -40,7 +40,7 @@ function getInitials(name: string): string {
 
 function getAvatarColor(name: string): string {
   const colors = [
-    "bg-indigo-500",
+    "bg-ottera-red-600",
     "bg-purple-500",
     "bg-blue-500",
     "bg-teal-500",

@@ -12,7 +12,7 @@ const variantClasses: Record<BadgeVariant, string> = {
   yellow: "bg-yellow-100 text-yellow-800",
   red: "bg-red-100 text-red-800",
   gray: "bg-gray-100 text-gray-700",
-  indigo: "bg-indigo-100 text-indigo-800",
+  indigo: "bg-ottera-red-100 text-ottera-red-700",
 };
 
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(

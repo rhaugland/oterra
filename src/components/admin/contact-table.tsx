@@ -79,7 +79,7 @@ const checkSizeLabels: Record<string, string> = {
 const investorTypeColors: Record<string, string> = {
   family_office: "bg-purple-100 text-purple-800",
   venture_capital: "bg-blue-100 text-blue-800",
-  private_equity: "bg-indigo-100 text-indigo-800",
+  private_equity: "bg-ottera-red-100 text-ottera-red-700",
   strategic_corporate: "bg-teal-100 text-teal-800",
   other: "bg-gray-100 text-gray-600",
 };
@@ -231,7 +231,7 @@ function SortHeader({
     >
       <span className="inline-flex items-center gap-1">
         {label}
-        <span className={`text-gray-400 ${active ? "text-indigo-500" : ""}`}>
+        <span className={`text-gray-400 ${active ? "text-ottera-red-600" : ""}`}>
           {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
         </span>
       </span>
@@ -256,7 +256,7 @@ function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+      className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-ottera-red-600 bg-white"
     >
       <option value="">{label}</option>
       {options.map((o) => (
@@ -324,7 +324,7 @@ function AddToRoomDropdown({
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-xs font-bold leading-none transition-colors"
+        className="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-ottera-red-50 text-ottera-red-600 hover:bg-ottera-red-100 text-xs font-bold leading-none transition-colors"
         title="Add to data room"
       >
         +
@@ -427,7 +427,7 @@ export function ContactTable({ contacts, dataRooms }: ContactTableProps) {
           placeholder="Search contacts..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ottera-red-600"
         />
         <FilterSelect
           label="Investor Type"

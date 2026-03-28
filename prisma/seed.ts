@@ -130,33 +130,42 @@ async function main() {
 
   const sarahContact = await prisma.contact.upsert({
     where: { email: "sarah@acmecorp.com" },
-    update: {},
+    update: { investorType: "strategic_corporate", geography: "us", checkSize: "mid" },
     create: {
       email: "sarah@acmecorp.com",
       name: "Sarah Johnson",
       company: "Acme Corp",
+      investorType: "strategic_corporate",
+      geography: "us",
+      checkSize: "mid",
       createdById: adminUser.id,
     },
   });
 
   const mikeContact = await prisma.contact.upsert({
     where: { email: "mike@investco.com" },
-    update: {},
+    update: { investorType: "venture_capital", geography: "apac", checkSize: "large" },
     create: {
       email: "mike@investco.com",
       name: "Mike Chen",
       company: "InvestCo",
+      investorType: "venture_capital",
+      geography: "apac",
+      checkSize: "large",
       createdById: adminUser.id,
     },
   });
 
   const lisaContact = await prisma.contact.upsert({
     where: { email: "lisa@globalvc.com" },
-    update: {},
+    update: { investorType: "family_office", geography: "middle_east", checkSize: "large" },
     create: {
       email: "lisa@globalvc.com",
       name: "Lisa Park",
       company: "Global VC",
+      investorType: "family_office",
+      geography: "middle_east",
+      checkSize: "large",
       createdById: adminUser.id,
     },
   });
@@ -245,7 +254,7 @@ async function main() {
     return file;
   }
 
-  await upsertFile({
+  const fileFinancials = await upsertFile({
     name: "Financial_Projections_2026.xlsx",
     mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     size: 204800,
@@ -255,7 +264,7 @@ async function main() {
     tagIds: [tagFinancials.id],
   });
 
-  await upsertFile({
+  const fileCapTable = await upsertFile({
     name: "Cap_Table.pdf",
     mimeType: "application/pdf",
     size: 102400,
@@ -265,7 +274,7 @@ async function main() {
     tagIds: [tagFinancials.id],
   });
 
-  await upsertFile({
+  const fileTechArch = await upsertFile({
     name: "Technical_Architecture.pdf",
     mimeType: "application/pdf",
     size: 512000,
@@ -285,7 +294,7 @@ async function main() {
     tagIds: [tagLegal.id],
   });
 
-  await upsertFile({
+  const fileDueDiligence = await upsertFile({
     name: "Due_Diligence_Checklist.xlsx",
     mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     size: 153600,
@@ -295,7 +304,7 @@ async function main() {
     tagIds: [tagDueDiligence.id],
   });
 
-  await upsertFile({
+  const fileOpsManual = await upsertFile({
     name: "Operations_Manual.pdf",
     mimeType: "application/pdf",
     size: 307200,
@@ -377,6 +386,88 @@ async function main() {
     console.log("Created AuditLog entries");
   } else {
     console.log("Skipping AuditLog entries — already seeded");
+  }
+
+  // ─── File View Logs (file.download) ─────────────────────────────────────
+  const viewCount = await prisma.auditLog.count({
+    where: { action: "file.download" },
+  });
+
+  if (viewCount === 0) {
+    await prisma.auditLog.createMany({
+      data: [
+        // Sarah views Acme files (she's strategic_corporate, us, mid)
+        {
+          action: "file.download",
+          actorType: "contact",
+          actorId: sarahContact.id,
+          resourceType: "File",
+          resourceId: fileFinancials.id,
+          metadata: { fileName: "Financial_Projections_2026.xlsx" },
+        },
+        {
+          action: "file.download",
+          actorType: "contact",
+          actorId: sarahContact.id,
+          resourceType: "File",
+          resourceId: fileFinancials.id,
+          metadata: { fileName: "Financial_Projections_2026.xlsx" },
+        },
+        {
+          action: "file.download",
+          actorType: "contact",
+          actorId: sarahContact.id,
+          resourceType: "File",
+          resourceId: fileCapTable.id,
+          metadata: { fileName: "Cap_Table.pdf" },
+        },
+        {
+          action: "file.download",
+          actorType: "contact",
+          actorId: sarahContact.id,
+          resourceType: "File",
+          resourceId: fileTechArch.id,
+          metadata: { fileName: "Technical_Architecture.pdf" },
+        },
+        // Lisa views Acme files (she's family_office, middle_east, large)
+        {
+          action: "file.download",
+          actorType: "contact",
+          actorId: lisaContact.id,
+          resourceType: "File",
+          resourceId: fileFinancials.id,
+          metadata: { fileName: "Financial_Projections_2026.xlsx" },
+        },
+        // Mike views Phoenix files (he's venture_capital, apac, large)
+        {
+          action: "file.download",
+          actorType: "contact",
+          actorId: mikeContact.id,
+          resourceType: "File",
+          resourceId: fileDueDiligence.id,
+          metadata: { fileName: "Due_Diligence_Checklist.xlsx" },
+        },
+        {
+          action: "file.download",
+          actorType: "contact",
+          actorId: mikeContact.id,
+          resourceType: "File",
+          resourceId: fileDueDiligence.id,
+          metadata: { fileName: "Due_Diligence_Checklist.xlsx" },
+        },
+        {
+          action: "file.download",
+          actorType: "contact",
+          actorId: mikeContact.id,
+          resourceType: "File",
+          resourceId: fileOpsManual.id,
+          metadata: { fileName: "Operations_Manual.pdf" },
+        },
+      ],
+    });
+    console.log("Created file.download view logs");
+  } else {
+    console.log("Skipping file.download logs — already seeded");
   }
 
   console.log("Seed complete.");
