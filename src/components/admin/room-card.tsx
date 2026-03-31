@@ -68,6 +68,7 @@ interface RoomCardProps {
   fileCount: number;
   fileNames: string[];
   contactCount: number;
+  contactNames: string[];
   ndaGroups: Record<string, { id: string; name: string }[]>;
   investorTypeGroups: Record<string, string[]>;
   geographyGroups: Record<string, string[]>;
@@ -137,6 +138,35 @@ function FileHoverBadge({ fileCount, fileNames }: { fileCount: number; fileNames
             ))}
             {fileNames.length > 10 && (
               <span className="block text-[10px] text-gray-400 pt-0.5">+{fileNames.length - 10} more</span>
+            )}
+          </span>
+        </span>
+      )}
+    </span>
+  );
+}
+
+function ContactHoverBadge({ contactCount, contactNames }: { contactCount: number; contactNames: string[] }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <span
+      className="relative inline-block"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span className="cursor-default">
+        {contactCount} {contactCount === 1 ? "contact" : "contacts"}
+      </span>
+      {hovered && contactNames && contactNames.length > 0 && (
+        <span className="absolute z-50 -left-1 top-full pt-1 w-52">
+          <span className="block bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+            <span className="text-[10px] font-semibold text-gray-500 uppercase block mb-1">Contacts</span>
+            {contactNames.slice(0, 10).map((n, i) => (
+              <span key={i} className="block text-xs text-gray-700 py-0.5 truncate">{n}</span>
+            ))}
+            {contactNames.length > 10 && (
+              <span className="block text-[10px] text-gray-400 pt-0.5">+{contactNames.length - 10} more</span>
             )}
           </span>
         </span>
@@ -507,6 +537,7 @@ export function RoomCard({
   fileCount,
   fileNames,
   contactCount,
+  contactNames,
   ndaGroups,
   investorTypeGroups,
   geographyGroups,
@@ -567,7 +598,7 @@ export function RoomCard({
       <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
         <FileHoverBadge fileCount={fileCount} fileNames={fileNames} />
         <span className="text-gray-300">&bull;</span>
-        <span>{contactCount} {contactCount === 1 ? "contact" : "contacts"}</span>
+        <ContactHoverBadge contactCount={contactCount} contactNames={contactNames} />
       </div>
 
       {hasContacts ? (

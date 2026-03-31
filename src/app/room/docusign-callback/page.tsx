@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -64,6 +64,14 @@ function useNdaStatusPolling(
 }
 
 export default function DocuSignCallbackPage() {
+  return (
+    <Suspense fallback={<CallbackLayout title="Loading…"><p className="text-gray-600">Please wait…</p></CallbackLayout>}>
+      <DocuSignCallbackContent />
+    </Suspense>
+  );
+}
+
+function DocuSignCallbackContent() {
   const searchParams = useSearchParams();
   const event = (searchParams.get("event") ?? "") as SigningEvent;
   const accessId = searchParams.get("accessId");

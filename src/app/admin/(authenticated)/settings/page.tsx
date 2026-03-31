@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface TeamMember {
   id: string;
@@ -16,11 +16,39 @@ interface CurrentUserInfo {
   role: "admin" | "member";
 }
 
-type Tab = "team" | "nda";
+interface ConnectionInfo {
+  connected: boolean;
+  email?: string;
+}
+
+interface ConnectionsStatus {
+  microsoft: ConnectionInfo;
+  docusign: ConnectionInfo;
+  calendly: ConnectionInfo;
+}
+
+type Tab = "team" | "nda" | "connections";
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8"><p className="text-gray-500">Loading settings…</p></div>}>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("team");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<Tab>(
+    tabParam === "connections" ? "connections" : "team"
+  );
+
+  // Sync tab with URL changes (e.g. clicking sidebar links)
+  useEffect(() => {
+    if (tabParam === "connections") setActiveTab("connections");
+  }, [tabParam]);
 
   // Team state
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -40,6 +68,12 @@ export default function SettingsPage() {
   // Remove state
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
+
+  // Connections state
+  const [connections, setConnections] = useState<ConnectionsStatus | null>(null);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const connectedParam = searchParams.get("connected");
+  const errorParam = searchParams.get("error");
 
   const fetchTeam = useCallback(async () => {
     setTeamError(null);
@@ -76,6 +110,41 @@ export default function SettingsPage() {
     void fetchTeam();
     void fetchCurrentUser();
   }, [fetchTeam, fetchCurrentUser]);
+
+  const fetchConnections = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/integrations/status", { credentials: "include" });
+      if (res.ok) {
+        setConnections(await res.json());
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    void fetchConnections();
+  }, [fetchConnections]);
+
+  // If redirected back from OAuth, switch to connections tab
+  useEffect(() => {
+    if (connectedParam || errorParam) {
+      setActiveTab("connections");
+      void fetchConnections();
+    }
+  }, [connectedParam, errorParam, fetchConnections]);
+
+  async function handleDisconnect(provider: string) {
+    if (!confirm(`Disconnect ${provider}? You'll need to reconnect to use this integration.`)) return;
+    setDisconnecting(provider);
+    try {
+      await fetch(`/api/admin/integrations/${provider}/disconnect`, {
+        method: "POST",
+        credentials: "include",
+      });
+      await fetchConnections();
+    } finally {
+      setDisconnecting(null);
+    }
+  }
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -136,7 +205,7 @@ export default function SettingsPage() {
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-6">
-          {(["team", "nda"] as Tab[]).map((tab) => (
+          {(["team", "connections", "nda"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -146,7 +215,7 @@ export default function SettingsPage() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
             >
-              {tab === "team" ? "Team" : "NDA Template"}
+              {tab === "team" ? "Team" : tab === "connections" ? "Connections" : "NDA Template"}
             </button>
           ))}
         </nav>
@@ -331,6 +400,181 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Connections Tab */}
+      {activeTab === "connections" && (
+        <div className="max-w-2xl">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Integrations</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Connect your accounts to enable email sending, NDA signing, and calendar scheduling.
+          </p>
+
+          {connectedParam && (
+            <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+              Successfully connected {connectedParam === "microsoft" ? "Outlook" : connectedParam}!
+            </div>
+          )}
+
+          {errorParam && (
+            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {errorParam}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Microsoft / Outlook */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7.88 12.04q0 .45-.11.87-.1.41-.33.74-.22.33-.58.52-.37.2-.87.2t-.85-.2q-.35-.21-.57-.55-.22-.33-.33-.75-.1-.42-.1-.86t.1-.87q.1-.43.34-.76.22-.34.59-.54.36-.2.87-.2t.86.2q.35.21.57.55.22.34.33.75.1.43.1.87zm-6.88 0q0-.86.25-1.55.25-.7.72-1.18.47-.5 1.14-.75.68-.27 1.54-.27.86 0 1.52.25.65.26 1.1.72.46.47.7 1.12.24.66.24 1.45 0 .85-.24 1.56-.23.69-.7 1.2-.47.5-1.13.78-.67.26-1.54.26-.85 0-1.52-.25Q2.7 14.14 2.23 13.67 1.77 13.2 1.53 12.53 1.3 11.87 1 11.04zm11.88 3.29H12V4.18h4.84l-.63 1.49H13.5v2.08h2.3v1.45h-2.3v3.13z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900">Outlook</h3>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        connections?.microsoft.connected
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          connections?.microsoft.connected ? "bg-green-500" : "bg-gray-400"
+                        }`} />
+                        {connections?.microsoft.connected ? "Connected" : "Not connected"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {connections?.microsoft.connected && connections.microsoft.email
+                        ? `Sending as ${connections.microsoft.email}`
+                        : "Send emails via your Microsoft 365 / Outlook account"}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  {connections?.microsoft.connected ? (
+                    <button
+                      onClick={() => handleDisconnect("microsoft")}
+                      disabled={disconnecting === "microsoft"}
+                      className="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    >
+                      {disconnecting === "microsoft" ? "Disconnecting..." : "Disconnect"}
+                    </button>
+                  ) : (
+                    <a
+                      href="/api/admin/integrations/microsoft/connect"
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Connect
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* DocuSign */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900">DocuSign</h3>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        connections?.docusign.connected
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          connections?.docusign.connected ? "bg-green-500" : "bg-gray-400"
+                        }`} />
+                        {connections?.docusign.connected ? "Connected" : "Not connected"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Send and track NDAs for signature
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  {connections?.docusign.connected ? (
+                    <button
+                      onClick={() => handleDisconnect("docusign")}
+                      disabled={disconnecting === "docusign"}
+                      className="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    >
+                      {disconnecting === "docusign" ? "Disconnecting..." : "Disconnect"}
+                    </button>
+                  ) : (
+                    <a
+                      href="/api/admin/integrations/docusign/connect"
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Connect
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Calendly */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900">Calendly</h3>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        connections?.calendly.connected
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          connections?.calendly.connected ? "bg-green-500" : "bg-gray-400"
+                        }`} />
+                        {connections?.calendly.connected ? "Connected" : "Not connected"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {connections?.calendly.connected && connections.calendly.email
+                        ? `Connected as ${connections.calendly.email}`
+                        : "Schedule meetings with contacts"}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  {connections?.calendly.connected ? (
+                    <button
+                      onClick={() => handleDisconnect("calendly")}
+                      disabled={disconnecting === "calendly"}
+                      className="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    >
+                      {disconnecting === "calendly" ? "Disconnecting..." : "Disconnect"}
+                    </button>
+                  ) : (
+                    <a
+                      href="/api/admin/integrations/calendly/connect"
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Connect
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

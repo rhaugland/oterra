@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, AuthError } from "@/lib/auth-admin";
 import { logAudit } from "@/lib/audit";
 import { sendEmail } from "@/lib/microsoft-graph";
+import { sendEnvelope } from "@/lib/docusign";
 import type { NdaStatus } from "@prisma/client";
 
 const SENDABLE_STATUSES: NdaStatus[] = ["not_sent", "declined", "voided"];
@@ -42,42 +43,73 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Contact not found" }, { status: 404 });
   }
 
-  // Send the email via Microsoft Graph
-  try {
-    await sendEmail({
-      to: { name: contact.name, email: contact.email },
-      subject,
-      bodyHtml,
-    });
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to send email";
-    return NextResponse.json({ error: message }, { status: 502 });
-  }
+  let finalBodyHtml = bodyHtml;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-  // If NDA action, update NDA status globally for the contact
+  // If NDA action, create DocuSign envelope and inject signing link
   if (action === "nda") {
     const accesses = await prisma.dataRoomAccess.findMany({
       where: { contactId },
-      select: { ndaStatus: true },
+      select: { id: true, ndaStatus: true, docusignEnvelopeId: true },
+      orderBy: { createdAt: "desc" },
     });
 
     const alreadySigned = accesses.some((a) => a.ndaStatus === "signed");
+
     if (!alreadySigned) {
-      const alreadySent = accesses.some((a) => a.ndaStatus === "sent");
-      if (!alreadySent) {
-        // Only update to sent if there's something to send
-        const hasSendable = accesses.some((a) =>
-          SENDABLE_STATUSES.includes(a.ndaStatus)
-        );
-        if (hasSendable) {
+      // Find an access that needs an NDA sent
+      const targetAccess = accesses.find((a) =>
+        SENDABLE_STATUSES.includes(a.ndaStatus)
+      ) || accesses.find((a) => a.ndaStatus === "sent");
+
+      if (targetAccess) {
+        // Create DocuSign envelope if one doesn't exist
+        if (!targetAccess.docusignEnvelopeId) {
+          try {
+            const returnUrl = `${appUrl}/room/docusign-callback?accessId=${targetAccess.id}`;
+            const { envelopeId } = await sendEnvelope(
+              { email: contact.email, name: contact.name },
+              "Data Room", // generic room name for global NDA
+              returnUrl
+            );
+
+            await prisma.dataRoomAccess.updateMany({
+              where: { contactId, ndaStatus: { in: SENDABLE_STATUSES } },
+              data: { ndaStatus: "sent", docusignEnvelopeId: envelopeId },
+            });
+          } catch (err) {
+            console.error("DocuSign envelope creation failed:", err);
+            // Continue sending email without signing link — fall through
+          }
+        } else {
+          // Envelope exists, just update status
           await prisma.dataRoomAccess.updateMany({
             where: { contactId, ndaStatus: { in: SENDABLE_STATUSES } },
             data: { ndaStatus: "sent" },
           });
         }
+
+        // Build the signing link (public endpoint, generates fresh DocuSign URL on click)
+        const signingLink = `${appUrl}/api/nda/sign/${targetAccess.id}`;
+        finalBodyHtml = finalBodyHtml.replace(
+          /{{NDA_SIGNING_LINK}}/g,
+          signingLink
+        );
       }
     }
+  }
+
+  // Send the email via Microsoft Graph
+  try {
+    await sendEmail({
+      to: { name: contact.name, email: contact.email },
+      subject,
+      bodyHtml: finalBodyHtml,
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to send email";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 
   await logAudit({

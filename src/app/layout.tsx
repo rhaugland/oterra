@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Jura } from "next/font/google";
+import { Inter, Jura, Aldrich } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,6 +15,13 @@ const jura = Jura({
   weight: ["400", "500", "600", "700"],
 });
 
+const aldrich = Aldrich({
+  subsets: ["latin"],
+  variable: "--font-aldrich",
+  display: "swap",
+  weight: "400",
+});
+
 export const metadata: Metadata = {
   title: "OTTera Data Room",
   description: "Secure document sharing for deals and due diligence.",
@@ -26,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jura.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${jura.variable} ${aldrich.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-gray-50 text-gray-900">
         {children}
       </body>

@@ -219,6 +219,20 @@ model MagicLink {
   contact Contact @relation(fields: [contactId], references: [id])
 }
 
+model Integration {
+  id           String   @id @default(uuid()) @db.Uuid
+  provider     String   // "microsoft" | "docusign" | "calendly"
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  senderEmail  String?  // For email integrations — the connected user's email
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([provider])
+}
+
 model AuditLog {
   id           String    @id @default(uuid()) @db.Uuid
   action       String

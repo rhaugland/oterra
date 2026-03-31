@@ -6,6 +6,8 @@ const COOKIE_NAME = "session_token";
 const USER_SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 const CONTACT_SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+const isHttps = (process.env.NEXT_PUBLIC_APP_URL ?? "").startsWith("https://");
+
 export type SessionType = "user" | "contact";
 
 export interface UserSession {
@@ -42,8 +44,8 @@ export async function createSession(
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production" || isHttps,
+    sameSite: "lax",
     expires: expiresAt,
     path: "/",
   });
@@ -97,8 +99,8 @@ export async function destroySession(request: Request): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production" || isHttps,
+    sameSite: "lax",
     expires: new Date(0),
     path: "/",
   });

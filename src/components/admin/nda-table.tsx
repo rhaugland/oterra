@@ -38,7 +38,7 @@ function formatDate(iso: string) {
   });
 }
 
-function dispatchMagicLink(row: NdaRow) {
+function dispatchEmailFab(row: NdaRow, action: "nda" | "magic-link") {
   window.dispatchEvent(
     new CustomEvent("email-fab:open", {
       detail: {
@@ -46,7 +46,7 @@ function dispatchMagicLink(row: NdaRow) {
         contactName: row.contactName,
         contactEmail: row.contactEmail,
         contactCompany: row.contactCompany,
-        action: "magic-link",
+        action,
         roomId: row.roomId,
         roomName: row.roomName,
       },
@@ -60,7 +60,6 @@ export function NdaTable({ rows }: NdaTableProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<string>("");
   const [search, setSearch] = useState("");
-  const [sendingId, setSendingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
   // Main table: everything EXCEPT signed + approved
@@ -82,27 +81,6 @@ export function NdaTable({ rows }: NdaTableProps) {
     });
   }, [rows, filter, search]);
 
-  async function handleSendNda(accessId: string) {
-    if (!confirm("Send NDA via DocuSign to this contact?")) return;
-
-    setSendingId(accessId);
-    try {
-      const res = await fetch("/api/admin/ndas/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accessId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert((data as { error?: string }).error ?? "Failed to send NDA");
-      } else {
-        router.refresh();
-      }
-    } finally {
-      setSendingId(null);
-    }
-  }
-
   async function handleApprove(row: NdaRow) {
     setApprovingId(row.accessId);
     try {
@@ -123,15 +101,6 @@ export function NdaTable({ rows }: NdaTableProps) {
     } finally {
       setApprovingId(null);
     }
-  }
-
-  function getMailtoLink(row: NdaRow) {
-    const subject = encodeURIComponent(`NDA for ${row.roomName}`);
-    const body = encodeURIComponent(
-      `Hi ${row.contactName},\n\nPlease find attached the NDA for the data room "${row.roomName}". ` +
-        `Once you have reviewed and signed, your access will be activated.\n\nBest regards`
-    );
-    return `mailto:${row.contactEmail}?subject=${subject}&body=${body}`;
   }
 
   return (
@@ -175,9 +144,6 @@ export function NdaTable({ rows }: NdaTableProps) {
                   Contact
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Data Room
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   NDA Status
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -196,7 +162,6 @@ export function NdaTable({ rows }: NdaTableProps) {
                   row.ndaStatus === "declined" ||
                   row.ndaStatus === "voided";
                 const canResend = row.ndaStatus === "sent";
-                const isSending = sendingId === row.accessId;
                 const isSigned = row.ndaStatus === "signed";
                 const isApproving = approvingId === row.accessId;
 
@@ -220,14 +185,6 @@ export function NdaTable({ rows }: NdaTableProps) {
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/rooms/${row.roomId}`}
-                        className="text-sm text-ottera-red-600 hover:text-ottera-red-700"
-                      >
-                        {row.roomName}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}
                       >
@@ -241,28 +198,14 @@ export function NdaTable({ rows }: NdaTableProps) {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        {/* Send / Resend NDA */}
+                        {/* Send / Resend NDA — opens email composer */}
                         {(canSend || canResend) && (
                           <button
-                            onClick={() => handleSendNda(row.accessId)}
-                            disabled={isSending}
-                            className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-ottera-red-600 text-white hover:bg-ottera-red-700 disabled:opacity-50 transition-colors"
+                            onClick={() => dispatchEmailFab(row, "nda")}
+                            className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-ottera-red-600 text-white hover:bg-ottera-red-700 transition-colors"
                           >
-                            {isSending
-                              ? "Sending..."
-                              : canResend
-                                ? "Resend NDA"
-                                : "Send NDA"}
+                            {canResend ? "Resend NDA" : "Send NDA"}
                           </button>
-                        )}
-                        {(canSend || canResend) && (
-                          <a
-                            href={getMailtoLink(row)}
-                            className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                            title="Open in email client (Outlook)"
-                          >
-                            Email
-                          </a>
                         )}
 
                         {/* Signed but not approved — show Approve button */}
@@ -333,9 +276,6 @@ export function CompletedNdaTable({ rows }: NdaTableProps) {
                 Contact
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Data Room
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -367,14 +307,6 @@ export function CompletedNdaTable({ rows }: NdaTableProps) {
                   </Link>
                 </td>
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/rooms/${row.roomId}`}
-                    className="text-sm text-ottera-red-600 hover:text-ottera-red-700"
-                  >
-                    {row.roomName}
-                  </Link>
-                </td>
-                <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       Signed
@@ -391,7 +323,7 @@ export function CompletedNdaTable({ rows }: NdaTableProps) {
                 </td>
                 <td className="px-4 py-3">
                   <button
-                    onClick={() => dispatchMagicLink(row)}
+                    onClick={() => dispatchEmailFab(row, "magic-link")}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60 transition-colors"
                   >
                     <svg

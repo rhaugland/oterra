@@ -52,7 +52,9 @@ function buildNdaEmail(
     subject: `NDA for ${contact.name}${contact.company ? ` — ${contact.company}` : ""}`,
     body: `<p>Hi ${contact.name.split(" ")[0]},</p>
 
-<p>Thank you for your interest. Please find the Non-Disclosure Agreement attached for your review and signature.</p>
+<p>Thank you for your interest. Please review and sign the Non-Disclosure Agreement by clicking the link below:</p>
+
+<p><a href="{{NDA_SIGNING_LINK}}" style="display:inline-block;padding:10px 24px;background-color:#dc2626;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;">Sign NDA</a></p>
 
 <p>Once signed, we'll grant you access to the relevant data room materials.</p>
 
@@ -74,7 +76,7 @@ function buildCalendlyEmail(
 
 <p>Please use the link below to book a time that works best for you:</p>
 
-<p><a href="${calendlyLink}">${calendlyLink}</a></p>
+<p><a href="${calendlyLink}" style="display:inline-block;padding:10px 24px;background-color:#0069ff;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;">Schedule a Meeting</a></p>
 
 <p>Looking forward to speaking with you.</p>
 
@@ -149,14 +151,28 @@ export function EmailFab({ preselect, onPreselectHandled }: EmailFabProps = {}) 
       .catch(() => setLoading(false));
   }, [open]);
 
-  // Fetch Calendly link
+  // Fetch Calendly link from integrations (or fallback to settings)
   useEffect(() => {
-    fetch("/api/admin/settings", { credentials: "include" })
+    let found = false;
+    fetch("/api/admin/integrations/status", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
-        if (data.calendlyLink) setCalendlyLink(data.calendlyLink);
+        if (data.calendly?.schedulingUrl) {
+          setCalendlyLink(data.calendly.schedulingUrl);
+          found = true;
+        }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!found) {
+          fetch("/api/admin/settings", { credentials: "include" })
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.calendlyLink) setCalendlyLink(data.calendlyLink);
+            })
+            .catch(() => {});
+        }
+      });
   }, []);
 
   // Handle preselection via props
@@ -219,7 +235,27 @@ export function EmailFab({ preselect, onPreselectHandled }: EmailFabProps = {}) 
       setSelectedContact(fakeContact);
       setAction(detail.action);
 
-      if (detail.action === "magic-link" && detail.roomId && detail.roomName) {
+      if (detail.action === "nda") {
+        // Go straight to compose with NDA email
+        const email = buildNdaEmail(fakeContact, calendlyLink || undefined);
+        setSubject(email.subject);
+        setBodyHtml(email.body);
+        setOpen(true);
+        setStep("compose");
+      } else if (detail.action === "calendly") {
+        // Go straight to compose with Calendly email
+        const link = calendlyLink || "";
+        if (!link) {
+          setError("Calendly not connected. Go to Settings → Connections to connect.");
+          setOpen(true);
+          return;
+        }
+        const email = buildCalendlyEmail(fakeContact, link);
+        setSubject(email.subject);
+        setBodyHtml(email.body);
+        setOpen(true);
+        setStep("compose");
+      } else if (detail.action === "magic-link" && detail.roomId && detail.roomName) {
         setSelectedRoomId(detail.roomId);
         setSelectedRoomName(detail.roomName);
         setOpen(true);
@@ -243,7 +279,7 @@ export function EmailFab({ preselect, onPreselectHandled }: EmailFabProps = {}) 
 
     window.addEventListener("email-fab:open", handleEvent);
     return () => window.removeEventListener("email-fab:open", handleEvent);
-  }, []);
+  }, [calendlyLink]);
 
   // Close on outside click
   useEffect(() => {
@@ -319,7 +355,11 @@ export function EmailFab({ preselect, onPreselectHandled }: EmailFabProps = {}) 
       setBodyHtml(email.body);
       setStep("compose");
     } else if (a === "calendly") {
-      const link = calendlyLink || "https://calendly.com/your-link";
+      const link = calendlyLink || "";
+      if (!link) {
+        setError("Calendly not connected. Go to Settings → Connections to connect.");
+        return;
+      }
       const email = buildCalendlyEmail(selectedContact, link);
       setSubject(email.subject);
       setBodyHtml(email.body);
@@ -502,7 +542,9 @@ export function EmailFab({ preselect, onPreselectHandled }: EmailFabProps = {}) 
               )}
 
               {/* Step 2: Select Action */}
-              {step === "select-action" && selectedContact && (
+              {step === "select-action" && selectedContact && (() => {
+                const ndaSigned = getNdaStatus(selectedContact) === "signed";
+                return (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-500 mb-4">
                     What would you like to send to{" "}
@@ -546,10 +588,17 @@ export function EmailFab({ preselect, onPreselectHandled }: EmailFabProps = {}) 
                   </button>
 
                   <button
-                    onClick={() => handleSelectAction("magic-link")}
-                    className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all text-left"
+                    onClick={() => ndaSigned && handleSelectAction("magic-link")}
+                    disabled={!ndaSigned}
+                    className={`w-full flex items-center gap-4 p-4 border rounded-xl transition-all text-left ${
+                      ndaSigned
+                        ? "border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/30 cursor-pointer"
+                        : "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
+                    }`}
                   >
-                    <span className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <span className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                      ndaSigned ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-400"
+                    }`}>
                       <svg
                         className="w-5 h-5"
                         fill="none"
@@ -565,13 +614,15 @@ export function EmailFab({ preselect, onPreselectHandled }: EmailFabProps = {}) 
                       </svg>
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className={`text-sm font-semibold ${ndaSigned ? "text-gray-900" : "text-gray-400"}`}>
                         Send Data Room Access
                       </p>
                       <p className="text-xs text-gray-500">
-                        {selectedContact.ndaStatuses.length > 0
-                          ? `Send access link (${selectedContact.ndaStatuses.length} room${selectedContact.ndaStatuses.length > 1 ? "s" : ""})`
-                          : "No room access yet"}
+                        {!ndaSigned
+                          ? "NDA must be signed first"
+                          : selectedContact.ndaStatuses.length > 0
+                            ? `Send access link (${selectedContact.ndaStatuses.length} room${selectedContact.ndaStatuses.length > 1 ? "s" : ""})`
+                            : "No room access yet"}
                       </p>
                     </div>
                   </button>
@@ -615,7 +666,8 @@ export function EmailFab({ preselect, onPreselectHandled }: EmailFabProps = {}) 
                     &larr; Back to contacts
                   </button>
                 </div>
-              )}
+                );
+              })()}
 
               {/* Step 2b: Select Room (for magic link) */}
               {step === "select-room" && selectedContact && (

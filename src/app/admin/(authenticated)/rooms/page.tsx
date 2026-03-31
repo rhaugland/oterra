@@ -147,6 +147,7 @@ export default async function RoomsPage() {
       fileCount: room.files.length,
       fileNames: room.files.map((f) => f.name),
       contactCount: uniqueContactIds.size,
+      contactNames: room.accesses.map((a) => a.contact.name),
       ndaGroups,
       investorTypeGroups: groupBy(room.accesses, (a) => a.contact.investorType),
       geographyGroups: groupBy(room.accesses, (a) => a.contact.geography),

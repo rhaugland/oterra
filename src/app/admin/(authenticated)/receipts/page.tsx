@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { ReceiptCard } from "@/components/admin/receipt-card";
 
 function getWeekBounds(weeksAgo: number) {
   const now = new Date();
-  // Start of current week (Monday)
   const dayOfWeek = now.getDay();
   const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const monday = new Date(now);
@@ -22,60 +22,136 @@ function formatWeekRange(start: Date, end: Date) {
   return `${start.toLocaleDateString("en-US", opts)} – ${end.toLocaleDateString("en-US", yearOpts)}`;
 }
 
-interface WeeklyReceipt {
-  weekLabel: string;
-  start: Date;
-  end: Date;
-  newContacts: number;
-  ndasSigned: number;
-  ndasSent: number;
-  totalDocViews: number;
-  isCurrent: boolean;
-}
-
 export default async function ReceiptsPage() {
-  // Generate receipts for the last 8 weeks
   const weeks = Array.from({ length: 8 }, (_, i) => getWeekBounds(i));
 
-  const receipts: WeeklyReceipt[] = [];
+  // Build contact lookup from all contacts
+  const allContacts = await prisma.contact.findMany({
+    select: { id: true, name: true, email: true },
+  });
+  const contactMap = new Map(allContacts.map((c) => [c.id, c.name]));
+
+  const receipts = [];
 
   for (let i = 0; i < weeks.length; i++) {
     const { start, end } = weeks[i];
 
-    const [newContacts, ndasSigned, ndasSent, docViews] = await Promise.all([
-      prisma.contact.count({
+    const [
+      newContacts,
+      ndasSentAccesses,
+      ndasSignedAccesses,
+      docViewLogs,
+      magicLinkLogs,
+    ] = await Promise.all([
+      // New contacts created this week
+      prisma.contact.findMany({
         where: { createdAt: { gte: start, lte: end } },
+        select: { id: true, name: true },
       }),
-      prisma.auditLog.count({
+
+      // NDAs sent: DataRoomAccess records where NDA was sent (sent, signed, declined, voided all mean it was sent)
+      // Use updatedAt for sent status, createdAt for tracking when the access was created
+      prisma.dataRoomAccess.findMany({
         where: {
-          action: "nda.signed",
+          ndaStatus: { in: ["sent", "signed", "declined", "voided"] },
           createdAt: { gte: start, lte: end },
         },
-      }),
-      prisma.auditLog.count({
-        where: {
-          action: { in: ["nda.sent", "access.assigned"] },
-          createdAt: { gte: start, lte: end },
+        select: {
+          contactId: true,
+          contact: { select: { name: true } },
         },
       }),
-      prisma.auditLog.count({
+
+      // NDAs signed: DataRoomAccess records where NDA was signed, using approvedAt or updatedAt
+      prisma.dataRoomAccess.findMany({
+        where: {
+          ndaStatus: "signed",
+          updatedAt: { gte: start, lte: end },
+        },
+        select: {
+          contactId: true,
+          contact: { select: { name: true } },
+        },
+      }),
+
+      // Doc views from audit log (file.download by contacts)
+      prisma.auditLog.findMany({
         where: {
           action: "file.download",
           actorType: "contact",
           createdAt: { gte: start, lte: end },
         },
+        select: { actorId: true },
       }),
+
+      // Magic links sent
+      prisma.auditLog.findMany({
+        where: {
+          action: "magic_link.created",
+          createdAt: { gte: start, lte: end },
+        },
+        select: { actorId: true, metadata: true },
+      }),
+
     ]);
+
+    // New Contacts
+    const newContactNames = newContacts.map((c) => c.name);
+
+    // NDAs Sent — deduplicate by contactId
+    const ndaSentMap = new Map<string, string>();
+    for (const a of ndasSentAccesses) {
+      ndaSentMap.set(a.contactId, a.contact.name);
+    }
+    const ndaSentNames = [...ndaSentMap.values()];
+
+    // NDAs Signed — deduplicate by contactId
+    const ndaSignedMap = new Map<string, string>();
+    for (const a of ndasSignedAccesses) {
+      ndaSignedMap.set(a.contactId, a.contact.name);
+    }
+    const ndaSignedNames = [...ndaSignedMap.values()];
+
+    // Doc Views — contact name + view count
+    const viewCounts = new Map<string, number>();
+    for (const log of docViewLogs) {
+      viewCounts.set(log.actorId, (viewCounts.get(log.actorId) || 0) + 1);
+    }
+    const docViewDetails = [...viewCounts.entries()]
+      .map(([id, count]) => {
+        const name = contactMap.get(id);
+        return name ? `${name} (${count} ${count === 1 ? "view" : "views"})` : null;
+      })
+      .filter(Boolean) as string[];
+
+    // Magic Links — contact name + access count
+    const emailToName = new Map(allContacts.map((c) => [c.email, c.name]));
+    const magicLinkCounts = new Map<string, number>();
+    for (const log of magicLinkLogs) {
+      const meta = log.metadata as Record<string, unknown> | null;
+      const email = meta?.contactEmail as string | undefined;
+      if (email) magicLinkCounts.set(email, (magicLinkCounts.get(email) || 0) + 1);
+    }
+    const magicLinkNames = [...magicLinkCounts.entries()]
+      .map(([email, count]) => {
+        const name = emailToName.get(email) || email;
+        return `${name} (${count} ${count === 1 ? "time" : "times"})`;
+      });
 
     receipts.push({
       weekLabel: formatWeekRange(start, end),
-      start,
-      end,
-      newContacts,
-      ndasSigned,
-      ndasSent,
-      totalDocViews: docViews,
       isCurrent: i === 0,
+      receiptNumber: weeks.length - i,
+      newContacts: newContacts.length,
+      newContactNames,
+      ndasSent: ndaSentMap.size,
+      ndaSentNames,
+      ndasSigned: ndaSignedMap.size,
+      ndaSignedNames,
+      totalDocViews: docViewLogs.length,
+      docViewDetails,
+      magicLinksSent: magicLinkLogs.length,
+      magicLinkNames,
     });
   }
 
@@ -90,51 +166,7 @@ export default async function ReceiptsPage() {
 
       <div className="space-y-4">
         {receipts.map((receipt, idx) => (
-          <div
-            key={idx}
-            className={`bg-white rounded-xl border ${
-              receipt.isCurrent ? "border-ottera-red-600/30 shadow-md" : "border-gray-200"
-            } p-6`}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900">
-                  {receipt.weekLabel}
-                </h2>
-                {receipt.isCurrent && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-ottera-red-50 text-ottera-red-600 mt-1">
-                    Current Week
-                  </span>
-                )}
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase">Receipt #{receipts.length - idx}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase">New Contacts</p>
-                <p className="text-xl font-bold text-gray-900 mt-0.5">{receipt.newContacts}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase">NDAs Sent</p>
-                <p className="text-xl font-bold text-gray-900 mt-0.5">{receipt.ndasSent}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-green-600 uppercase">NDAs Signed</p>
-                <p className="text-xl font-bold text-gray-900 mt-0.5">{receipt.ndasSigned}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase">Doc Views</p>
-                <p className="text-xl font-bold text-gray-900 mt-0.5">{receipt.totalDocViews}</p>
-              </div>
-            </div>
-
-            {receipt.newContacts === 0 && receipt.ndasSigned === 0 && receipt.ndasSent === 0 && receipt.totalDocViews === 0 && (
-              <p className="text-xs text-gray-400 mt-3 text-center">No activity this week</p>
-            )}
-          </div>
+          <ReceiptCard key={idx} {...receipt} />
         ))}
       </div>
     </div>

@@ -1,63 +1,90 @@
+import { prisma } from "@/lib/prisma";
+import { encrypt, decrypt } from "@/lib/encryption";
+
 const GRAPH_API = "https://graph.microsoft.com/v1.0";
-const LOGIN_URL = "https://login.microsoftonline.com";
 
-interface GraphConfig {
-  tenantId: string;
-  clientId: string;
-  clientSecret: string;
-  senderEmail: string;
-}
+/**
+ * Refresh the access token using the stored refresh token.
+ */
+async function refreshAccessToken(integration: {
+  id: string;
+  refreshToken: string | null;
+}): Promise<string> {
+  if (!integration.refreshToken) {
+    throw new Error("No refresh token — reconnect Microsoft in Settings");
+  }
 
-function getConfig(): GraphConfig {
-  const tenantId = process.env.MS_GRAPH_TENANT_ID;
   const clientId = process.env.MS_GRAPH_CLIENT_ID;
   const clientSecret = process.env.MS_GRAPH_CLIENT_SECRET;
-  const senderEmail = process.env.MS_GRAPH_SENDER_EMAIL;
+  const tenantId = process.env.MS_GRAPH_TENANT_ID || "common";
 
-  if (!tenantId || !clientId || !clientSecret || !senderEmail) {
-    throw new Error(
-      "Microsoft Graph not configured — set MS_GRAPH_TENANT_ID, MS_GRAPH_CLIENT_ID, MS_GRAPH_CLIENT_SECRET, and MS_GRAPH_SENDER_EMAIL"
-    );
+  if (!clientId || !clientSecret) {
+    throw new Error("MS_GRAPH_CLIENT_ID / MS_GRAPH_CLIENT_SECRET not configured");
   }
 
-  return { tenantId, clientId, clientSecret, senderEmail };
-}
-
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
-async function getAccessToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
-    return cachedToken.token;
-  }
-
-  const config = getConfig();
-  const tokenUrl = `${LOGIN_URL}/${config.tenantId}/oauth2/v2.0/token`;
-
-  const body = new URLSearchParams({
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
-    scope: "https://graph.microsoft.com/.default",
-    grant_type: "client_credentials",
-  });
-
-  const res = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
+  const res = await fetch(
+    `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: decrypt(integration.refreshToken),
+        grant_type: "refresh_token",
+        scope: "offline_access Mail.Send User.Read",
+      }).toString(),
+    }
+  );
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Microsoft Graph token error ${res.status}: ${text}`);
+    throw new Error(`Microsoft token refresh failed (${res.status}): ${text}`);
   }
 
   const data = await res.json();
-  cachedToken = {
-    token: data.access_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
-  };
+  const expiresAt = data.expires_in
+    ? new Date(Date.now() + data.expires_in * 1000)
+    : null;
 
-  return cachedToken.token;
+  // Update stored tokens
+  await prisma.integration.update({
+    where: { id: integration.id },
+    data: {
+      accessToken: encrypt(data.access_token),
+      refreshToken: data.refresh_token
+        ? encrypt(data.refresh_token)
+        : integration.refreshToken,
+      expiresAt,
+    },
+  });
+
+  return data.access_token;
+}
+
+/**
+ * Get a valid access token — refreshes automatically if expired.
+ */
+async function getAccessToken(): Promise<{ token: string; senderEmail: string }> {
+  const integration = await prisma.integration.findUnique({
+    where: { provider: "microsoft" },
+  });
+
+  if (!integration) {
+    throw new Error("Microsoft not connected — go to Settings to connect your Outlook account");
+  }
+
+  const now = new Date();
+  const isExpired = integration.expiresAt && integration.expiresAt < now;
+
+  let token: string;
+  if (isExpired) {
+    token = await refreshAccessToken(integration);
+  } else {
+    token = decrypt(integration.accessToken);
+  }
+
+  return { token, senderEmail: integration.senderEmail || "" };
 }
 
 export interface SendEmailParams {
@@ -67,8 +94,7 @@ export interface SendEmailParams {
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<void> {
-  const config = getConfig();
-  const token = await getAccessToken();
+  const { token } = await getAccessToken();
 
   const message = {
     message: {
@@ -89,17 +115,15 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
     saveToSentItems: true,
   };
 
-  const res = await fetch(
-    `${GRAPH_API}/users/${config.senderEmail}/sendMail`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(message),
-    }
-  );
+  // Use /me/sendMail — sends from whatever account authorized the OAuth flow
+  const res = await fetch(`${GRAPH_API}/me/sendMail`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(message),
+  });
 
   if (!res.ok) {
     const text = await res.text();
@@ -107,11 +131,9 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
   }
 }
 
-export function isConfigured(): boolean {
-  return !!(
-    process.env.MS_GRAPH_TENANT_ID &&
-    process.env.MS_GRAPH_CLIENT_ID &&
-    process.env.MS_GRAPH_CLIENT_SECRET &&
-    process.env.MS_GRAPH_SENDER_EMAIL
-  );
+export async function isConfigured(): Promise<boolean> {
+  const integration = await prisma.integration.findUnique({
+    where: { provider: "microsoft" },
+  });
+  return !!integration;
 }
